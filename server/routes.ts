@@ -68,6 +68,9 @@ function initDB() {
   )`);
   db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_anon_votes_unique ON anon_votes(build_id, voter_hash)`);
 
+  // Add anon_hash column to builds if not exists (for migrating anon submissions to registered users)
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN anon_hash TEXT`); } catch {}
+
   // Seed if empty
   const userCount = db.all(sql`SELECT count(*) as c FROM users`);
   // @ts-ignore
@@ -158,7 +161,32 @@ export async function registerRoutes(server: Server, app: Express) {
       return res.status(409).json({ error: "Username already taken" });
     }
     const user = storage.createUser({ username, passwordHash: password });
-    const { passwordHash, ...safe } = user;
+
+    // Migrate anonymous builds and votes to the new account
+    const voterHash = getVoterHash(req);
+
+    // Migrate builds: transfer anon builds to this user
+    const anonBuilds = db.all(sql`SELECT id FROM builds WHERE anon_hash = ${voterHash}`);
+    if (anonBuilds.length > 0) {
+      db.run(sql`UPDATE builds SET submitter_id = ${user.id}, anon_hash = NULL WHERE anon_hash = ${voterHash}`);
+      db.run(sql`UPDATE users SET build_submissions = build_submissions + ${anonBuilds.length} WHERE id = ${user.id}`);
+    }
+
+    // Migrate anon votes: convert to registered user votes
+    const anonVotes = db.all(sql`SELECT build_id, vote_type FROM anon_votes WHERE voter_hash = ${voterHash}`) as any[];
+    for (const av of anonVotes) {
+      // Only migrate if user doesn't already have a registered vote on this build
+      const existing = storage.getVote(av.build_id, user.id);
+      if (!existing) {
+        db.run(sql`INSERT INTO votes (build_id, user_id, vote_type, created_at) VALUES (${av.build_id}, ${user.id}, ${av.vote_type}, ${new Date().toISOString()})`);
+      }
+    }
+    // Remove migrated anon votes
+    db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
+
+    // Refresh user data (karma might have changed from migrated builds)
+    const refreshed = storage.getUserById(user.id);
+    const { passwordHash, ...safe } = refreshed || user;
     res.status(201).json(safe);
   });
 
@@ -168,7 +196,29 @@ export async function registerRoutes(server: Server, app: Express) {
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    const { passwordHash, ...safe } = user;
+
+    // Migrate any anonymous activity from this session to the logged-in user
+    const voterHash = getVoterHash(req);
+
+    // Migrate anon builds
+    const anonBuilds = db.all(sql`SELECT id FROM builds WHERE anon_hash = ${voterHash}`);
+    if (anonBuilds.length > 0) {
+      db.run(sql`UPDATE builds SET submitter_id = ${user.id}, anon_hash = NULL WHERE anon_hash = ${voterHash}`);
+      db.run(sql`UPDATE users SET build_submissions = build_submissions + ${anonBuilds.length} WHERE id = ${user.id}`);
+    }
+
+    // Migrate anon votes
+    const anonVotes = db.all(sql`SELECT build_id, vote_type FROM anon_votes WHERE voter_hash = ${voterHash}`) as any[];
+    for (const av of anonVotes) {
+      const existing = storage.getVote(av.build_id, user.id);
+      if (!existing) {
+        db.run(sql`INSERT INTO votes (build_id, user_id, vote_type, created_at) VALUES (${av.build_id}, ${user.id}, ${av.vote_type}, ${new Date().toISOString()})`);
+      }
+    }
+    db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
+
+    const refreshed = storage.getUserById(user.id);
+    const { passwordHash, ...safe } = refreshed || user;
     res.json(safe);
   });
 
@@ -239,14 +289,18 @@ export async function registerRoutes(server: Server, app: Express) {
   });
 
   app.post("/api/builds", (req, res) => {
-    // Allow anonymous submissions: if no submitterId, use the Anonymous user
+    const voterHash = getVoterHash(req);
     let submitterId = req.body.submitterId;
+    let isAnon = false;
+
     if (!submitterId) {
+      // Anonymous submission — create/reuse an "Anonymous" system user
       let anon = storage.getUserByUsername("Anonymous");
       if (!anon) {
         anon = storage.createUser({ username: "Anonymous", passwordHash: "nologin" });
       }
       submitterId = anon.id;
+      isAnon = true;
     } else {
       const user = storage.getUserById(submitterId);
       if (!user) return res.status(400).json({ error: "Invalid submitter" });
@@ -260,6 +314,12 @@ export async function registerRoutes(server: Server, app: Express) {
     if (!season) return res.status(400).json({ error: "Invalid season" });
 
     const build = storage.createBuild(parsed.data);
+
+    // Tag anonymous builds with voterHash so they can be claimed later on registration
+    if (isAnon) {
+      db.run(sql`UPDATE builds SET anon_hash = ${voterHash} WHERE id = ${build.id}`);
+    }
+
     res.status(201).json(storage.getBuild(build.id));
   });
 
