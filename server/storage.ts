@@ -1,5 +1,6 @@
 import {
   games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes, socialPosts,
+  bookmarks, anonBookmarks, reports, categories,
   type Game, type InsertGame,
   type GameMode, type InsertGameMode,
   type GameClass, type InsertGameClass,
@@ -9,6 +10,8 @@ import {
   type Vote, type InsertVote,
   type SocialPost, type InsertSocialPost,
   type BuildWithSubmitter,
+  type Category, type InsertCategory,
+  type Bookmark, type AnonBookmark, type Report,
   BUILD_SOURCES,
 } from "@shared/schema";
 import { db } from "./db";
@@ -38,6 +41,14 @@ export function detectSource(url: string): string {
 // ─── Storage interface ─────────────────────────────────────────
 
 export interface IStorage {
+  // Categories
+  getCategories(): Category[];
+  getCategory(id: number): Category | undefined;
+  getCategoryBySlug(slug: string): Category | undefined;
+  createCategory(cat: InsertCategory): Category;
+  updateCategory(id: number, data: Partial<InsertCategory>): Category | undefined;
+  deleteCategory(id: number): void;
+
   // Games
   getGames(): Game[];
   getGame(id: number): Game | undefined;
@@ -76,6 +87,8 @@ export interface IStorage {
   getUserByUsername(username: string): User | undefined;
   getUserById(id: number): User | undefined;
   updateKarma(userId: number, delta: number): void;
+  updateUser(id: number, data: { bio?: string; avatarEmoji?: string }): User | undefined;
+  updatePassword(id: number, newPasswordHash: string): void;
   getTopUsers(limit?: number): User[];
   getAllUsers(): User[];
 
@@ -85,12 +98,32 @@ export interface IStorage {
   createBuild(build: InsertBuild): Build;
   getUserBuilds(userId: number): BuildWithSubmitter[];
   deleteBuild(id: number): void;
+  updateBuildSocialMetrics(id: number, data: {
+    socialScore?: number; socialViews?: number; socialShares?: number;
+    isTrending?: boolean; isViral?: boolean; trendingReason?: string;
+  }): BuildWithSubmitter | undefined;
+  getTrendingBuilds(): BuildWithSubmitter[];
+  getViralBuilds(): BuildWithSubmitter[];
 
   // Votes
   getVote(buildId: number, userId: number): Vote | undefined;
   castVote(buildId: number, userId: number, voteType: string): Vote;
   removeVote(buildId: number, userId: number): void;
   getUserVotes(userId: number): Vote[];
+
+  // Bookmarks
+  getBookmark(buildId: number, userId: number): Bookmark | undefined;
+  toggleBookmark(buildId: number, userId: number): { action: "added" | "removed" };
+  getUserBookmarks(userId: number): BuildWithSubmitter[];
+  getAnonBookmark(buildId: number, voterHash: string): AnonBookmark | undefined;
+  toggleAnonBookmark(buildId: number, voterHash: string): { action: "added" | "removed" };
+  getAnonBookmarks(voterHash: string): AnonBookmark[];
+  getBookmarkCount(buildId: number): number;
+  migrateAnonBookmarks(voterHash: string, userId: number): void;
+
+  // Reports
+  createReport(buildId: number, voterHash: string, reason: string): Report;
+  getReports(): Report[];
 
   // Social posts
   createSocialPost(post: InsertSocialPost): SocialPost;
@@ -107,6 +140,38 @@ export interface IStorage {
 // ─── Database storage ──────────────────────────────────────────
 
 export class DatabaseStorage implements IStorage {
+
+  // ── Categories ──
+
+  getCategories(): Category[] {
+    return db.select().from(categories).orderBy(categories.sortOrder).all();
+  }
+
+  getCategory(id: number): Category | undefined {
+    return db.select().from(categories).where(eq(categories.id, id)).get();
+  }
+
+  getCategoryBySlug(slug: string): Category | undefined {
+    return db.select().from(categories).where(eq(categories.slug, slug)).get();
+  }
+
+  createCategory(cat: InsertCategory): Category {
+    return db.insert(categories).values({ ...cat, createdAt: new Date().toISOString() }).returning().get();
+  }
+
+  updateCategory(id: number, data: Partial<InsertCategory>): Category | undefined {
+    db.update(categories).set(data).where(eq(categories.id, id)).run();
+    return this.getCategory(id);
+  }
+
+  deleteCategory(id: number): void {
+    // Reassign games from deleted category to "other" in the text category field
+    const cat = this.getCategory(id);
+    if (cat) {
+      db.run(sql`UPDATE games SET category = 'other' WHERE category = ${cat.slug}`);
+    }
+    db.delete(categories).where(eq(categories.id, id)).run();
+  }
 
   // ── Games ──
 
@@ -265,6 +330,20 @@ export class DatabaseStorage implements IStorage {
     db.run(sql`UPDATE users SET karma = karma + ${delta} WHERE id = ${userId}`);
   }
 
+  updateUser(id: number, data: { bio?: string; avatarEmoji?: string }): User | undefined {
+    if (data.bio !== undefined) {
+      db.run(sql`UPDATE users SET bio = ${data.bio} WHERE id = ${id}`);
+    }
+    if (data.avatarEmoji !== undefined) {
+      db.run(sql`UPDATE users SET avatar_emoji = ${data.avatarEmoji} WHERE id = ${id}`);
+    }
+    return this.getUserById(id);
+  }
+
+  updatePassword(id: number, newPasswordHash: string): void {
+    db.run(sql`UPDATE users SET password_hash = ${newPasswordHash} WHERE id = ${id}`);
+  }
+
   getTopUsers(limit = 20): User[] {
     return db.select().from(users).orderBy(desc(users.karma)).limit(limit).all();
   }
@@ -275,6 +354,12 @@ export class DatabaseStorage implements IStorage {
 
   // ── Builds ──
 
+  private getBookmarkCountForBuild(buildId: number): number {
+    const userCount = (db.all(sql`SELECT count(*) as c FROM bookmarks WHERE build_id = ${buildId}`) as any[])[0]?.c ?? 0;
+    const anonCount = (db.all(sql`SELECT count(*) as c FROM anon_bookmarks WHERE build_id = ${buildId}`) as any[])[0]?.c ?? 0;
+    return userCount + anonCount;
+  }
+
   private enrichBuild(build: Build): BuildWithSubmitter {
     const submitter = build.submitterId ? this.getUserById(build.submitterId) : undefined;
     const season = build.seasonId ? this.getSeason(build.seasonId) : undefined;
@@ -284,6 +369,7 @@ export class DatabaseStorage implements IStorage {
       ...build,
       submitterName: submitter?.username ?? "Anonymous",
       submitterKarma: submitter?.karma ?? 0,
+      submitterAvatar: submitter?.avatarEmoji ?? "🎮",
       seasonSlug: season?.slug ?? null,
       seasonName: season?.name ?? null,
       gameModeName: gameMode?.name ?? null,
@@ -292,6 +378,7 @@ export class DatabaseStorage implements IStorage {
       gameSlug: game?.slug ?? "",
       gameIcon: game?.icon ?? "⚔️",
       gameColor: game?.color ?? "#d4a537",
+      bookmarkCount: this.getBookmarkCountForBuild(build.id),
     };
   }
 
@@ -324,6 +411,12 @@ export class DatabaseStorage implements IStorage {
       sourceType,
       upvotes: 0,
       downvotes: 0,
+      views: 0,
+      socialScore: 0,
+      socialViews: 0,
+      socialShares: 0,
+      isTrending: false,
+      isViral: false,
       createdAt: new Date().toISOString(),
     }).returning().get();
 
@@ -344,6 +437,38 @@ export class DatabaseStorage implements IStorage {
 
   deleteBuild(id: number): void {
     db.delete(builds).where(eq(builds.id, id)).run();
+  }
+
+  updateBuildSocialMetrics(id: number, data: {
+    socialScore?: number; socialViews?: number; socialShares?: number;
+    isTrending?: boolean; isViral?: boolean; trendingReason?: string;
+  }): BuildWithSubmitter | undefined {
+    const sets: string[] = [];
+    if (data.socialScore !== undefined) db.run(sql`UPDATE builds SET social_score = ${data.socialScore} WHERE id = ${id}`);
+    if (data.socialViews !== undefined) db.run(sql`UPDATE builds SET social_views = ${data.socialViews} WHERE id = ${id}`);
+    if (data.socialShares !== undefined) db.run(sql`UPDATE builds SET social_shares = ${data.socialShares} WHERE id = ${id}`);
+    if (data.isTrending !== undefined) db.run(sql`UPDATE builds SET is_trending = ${data.isTrending ? 1 : 0} WHERE id = ${id}`);
+    if (data.isViral !== undefined) db.run(sql`UPDATE builds SET is_viral = ${data.isViral ? 1 : 0} WHERE id = ${id}`);
+    if (data.trendingReason !== undefined) db.run(sql`UPDATE builds SET trending_reason = ${data.trendingReason} WHERE id = ${id}`);
+    return this.getBuild(id);
+  }
+
+  getTrendingBuilds(): BuildWithSubmitter[] {
+    const rows = db.select().from(builds)
+      .where(eq(builds.isTrending, true))
+      .orderBy(desc(builds.socialScore))
+      .limit(20)
+      .all();
+    return rows.map(b => this.enrichBuild(b));
+  }
+
+  getViralBuilds(): BuildWithSubmitter[] {
+    const rows = db.select().from(builds)
+      .where(eq(builds.isViral, true))
+      .orderBy(desc(builds.socialScore))
+      .limit(20)
+      .all();
+    return rows.map(b => this.enrichBuild(b));
   }
 
   // ── Votes ──
@@ -405,6 +530,83 @@ export class DatabaseStorage implements IStorage {
 
   getUserVotes(userId: number): Vote[] {
     return db.select().from(votes).where(eq(votes.userId, userId)).all();
+  }
+
+  // ── Bookmarks ──
+
+  getBookmark(buildId: number, userId: number): Bookmark | undefined {
+    const row = db.all(sql`SELECT * FROM bookmarks WHERE build_id = ${buildId} AND user_id = ${userId}`) as any[];
+    return row[0] as Bookmark | undefined;
+  }
+
+  toggleBookmark(buildId: number, userId: number): { action: "added" | "removed" } {
+    const existing = this.getBookmark(buildId, userId);
+    if (existing) {
+      db.run(sql`DELETE FROM bookmarks WHERE build_id = ${buildId} AND user_id = ${userId}`);
+      return { action: "removed" };
+    } else {
+      db.run(sql`INSERT INTO bookmarks (user_id, build_id, created_at) VALUES (${userId}, ${buildId}, ${new Date().toISOString()})`);
+      return { action: "added" };
+    }
+  }
+
+  getUserBookmarks(userId: number): BuildWithSubmitter[] {
+    const rows = db.all(sql`SELECT build_id FROM bookmarks WHERE user_id = ${userId} ORDER BY created_at DESC`) as any[];
+    const result: BuildWithSubmitter[] = [];
+    for (const row of rows) {
+      const build = this.getBuild(row.build_id);
+      if (build) result.push(build);
+    }
+    return result;
+  }
+
+  getAnonBookmark(buildId: number, voterHash: string): AnonBookmark | undefined {
+    const row = db.all(sql`SELECT * FROM anon_bookmarks WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`) as any[];
+    return row[0] as AnonBookmark | undefined;
+  }
+
+  toggleAnonBookmark(buildId: number, voterHash: string): { action: "added" | "removed" } {
+    const existing = this.getAnonBookmark(buildId, voterHash);
+    if (existing) {
+      db.run(sql`DELETE FROM anon_bookmarks WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
+      return { action: "removed" };
+    } else {
+      db.run(sql`INSERT INTO anon_bookmarks (build_id, voter_hash, created_at) VALUES (${buildId}, ${voterHash}, ${new Date().toISOString()})`);
+      return { action: "added" };
+    }
+  }
+
+  getAnonBookmarks(voterHash: string): AnonBookmark[] {
+    return db.all(sql`SELECT * FROM anon_bookmarks WHERE voter_hash = ${voterHash}`) as AnonBookmark[];
+  }
+
+  getBookmarkCount(buildId: number): number {
+    return this.getBookmarkCountForBuild(buildId);
+  }
+
+  migrateAnonBookmarks(voterHash: string, userId: number): void {
+    const anonBms = this.getAnonBookmarks(voterHash);
+    for (const bm of anonBms) {
+      const existing = this.getBookmark(bm.buildId, userId);
+      if (!existing) {
+        db.run(sql`INSERT INTO bookmarks (user_id, build_id, created_at) VALUES (${userId}, ${bm.buildId}, ${new Date().toISOString()})`);
+      }
+    }
+    db.run(sql`DELETE FROM anon_bookmarks WHERE voter_hash = ${voterHash}`);
+  }
+
+  // ── Reports ──
+
+  createReport(buildId: number, voterHash: string, reason: string): Report {
+    // Upsert — one report per voter per build
+    const existing = (db.all(sql`SELECT * FROM reports WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`) as any[])[0];
+    if (existing) return existing as Report;
+    db.run(sql`INSERT INTO reports (build_id, voter_hash, reason, created_at) VALUES (${buildId}, ${voterHash}, ${reason}, ${new Date().toISOString()})`);
+    return (db.all(sql`SELECT * FROM reports WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`) as any[])[0] as Report;
+  }
+
+  getReports(): Report[] {
+    return db.all(sql`SELECT r.*, b.name as build_name FROM reports r LEFT JOIN builds b ON b.id = r.build_id ORDER BY r.created_at DESC`) as Report[];
   }
 
   // ── Social posts ──

@@ -14,6 +14,9 @@ type UserProfile = {
   isAdmin: boolean;
   karma: number;
   buildSubmissions: number;
+  bio?: string;
+  avatarEmoji?: string;
+  bookmarksCount?: number;
   createdAt: string;
   builds: BuildWithSubmitter[];
 };
@@ -52,8 +55,8 @@ export default function UserProfilePage() {
       {/* Profile card */}
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-bold" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-            {profile.username.charAt(0).toUpperCase()}
+          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-2xl" data-testid="user-avatar">
+            {profile.avatarEmoji || "🎮"}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -66,10 +69,13 @@ export default function UserProfilePage() {
               </span>
               <Badge variant="secondary" className="text-xs">{getKarmaTitle(profile.karma)}</Badge>
             </div>
+            {profile.bio && (
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed" data-testid="user-bio">{profile.bio}</p>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-border">
+        <div className="grid grid-cols-4 gap-4 mt-5 pt-4 border-t border-border">
           <div className="text-center">
             <p className="text-lg font-bold text-foreground">{profile.buildSubmissions}</p>
             <p className="text-xs text-muted-foreground">Builds Submitted</p>
@@ -79,6 +85,10 @@ export default function UserProfilePage() {
               {totalScore > 0 ? "+" : ""}{totalScore}
             </p>
             <p className="text-xs text-muted-foreground">Total Score</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-foreground">{profile.bookmarksCount ?? 0}</p>
+            <p className="text-xs text-muted-foreground">Bookmarks</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-foreground">

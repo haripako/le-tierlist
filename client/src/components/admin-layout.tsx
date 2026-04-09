@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2 } from "lucide-react";
+import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Dashboard", icon: Shield },
+  { href: "/admin/categories", label: "Categories", icon: Tag },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/game-modes", label: "Game Modes", icon: Layers },
   { href: "/admin/classes", label: "Classes", icon: Swords },

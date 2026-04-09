@@ -6,6 +6,16 @@ import { z } from "zod";
 export const GAME_CATEGORIES = ["arpg", "looter-shooter", "mmo", "other"] as const;
 export type GameCategory = (typeof GAME_CATEGORIES)[number];
 
+// ─── Categories table (editable) ──────────────────────────────
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  icon: text("icon").notNull().default("🎮"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+});
+
 // ─── Games table ──────────────────────────────────────────────
 export const games = sqliteTable("games", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -17,6 +27,7 @@ export const games = sqliteTable("games", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   hasSeasons: integer("has_seasons", { mode: "boolean" }).notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  lastFeaturedAt: text("last_featured_at"),
   createdAt: text("created_at").notNull(),
 });
 
@@ -59,10 +70,12 @@ export const users = sqliteTable("users", {
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   karma: integer("karma").notNull().default(0),
   buildSubmissions: integer("build_submissions").notNull().default(0),
+  bio: text("bio"),
+  avatarEmoji: text("avatar_emoji").default("🎮"),
   createdAt: text("created_at").notNull(),
 });
 
-// ─── Builds table (updated — gameModeId replaces gameMode string) ──
+// ─── Builds table ─────────────────────────────────────────────
 export const builds = sqliteTable("builds", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   gameId: integer("game_id").notNull(),
@@ -81,6 +94,13 @@ export const builds = sqliteTable("builds", {
   anonHash: text("anon_hash"),
   upvotes: integer("upvotes").notNull().default(0),
   downvotes: integer("downvotes").notNull().default(0),
+  views: integer("views").notNull().default(0),
+  socialScore: integer("social_score").notNull().default(0),
+  socialViews: integer("social_views").notNull().default(0),
+  socialShares: integer("social_shares").notNull().default(0),
+  isTrending: integer("is_trending", { mode: "boolean" }).notNull().default(false),
+  isViral: integer("is_viral", { mode: "boolean" }).notNull().default(false),
+  trendingReason: text("trending_reason"),
   createdAt: text("created_at").notNull(),
 });
 
@@ -102,7 +122,36 @@ export const anonVotes = sqliteTable("anon_votes", {
   createdAt: text("created_at").notNull(),
 });
 
+// ─── Bookmarks ────────────────────────────────────────────────
+export const bookmarks = sqliteTable("bookmarks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  buildId: integer("build_id").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ─── Anonymous bookmarks ──────────────────────────────────────
+export const anonBookmarks = sqliteTable("anon_bookmarks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  buildId: integer("build_id").notNull(),
+  voterHash: text("voter_hash").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ─── Reports ──────────────────────────────────────────────────
+export const reports = sqliteTable("reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  buildId: integer("build_id").notNull(),
+  voterHash: text("voter_hash").notNull(),
+  reason: text("reason").notNull().default("inappropriate"),
+  createdAt: text("created_at").notNull(),
+});
+
 // ─── Insert schemas ────────────────────────────────────────────
+
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true, createdAt: true,
+});
 
 export const insertGameSchema = createInsertSchema(games).omit({
   id: true, createdAt: true,
@@ -128,6 +177,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertBuildSchema = createInsertSchema(builds).omit({
   id: true, upvotes: true, downvotes: true, createdAt: true, sourceType: true,
+  views: true, socialScore: true, socialViews: true, socialShares: true,
+  isTrending: true, isViral: true, trendingReason: true,
 }).extend({
   description: z.string().default(""),
   mainSkills: z.string().default("[]"),
@@ -145,6 +196,8 @@ export const insertVoteSchema = createInsertSchema(votes).omit({
 
 // ─── Types ────────────────────────────────────────────────────
 
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Game = typeof games.$inferSelect;
 export type InsertGame = z.infer<typeof insertGameSchema>;
 export type GameMode = typeof gameModes.$inferSelect;
@@ -159,11 +212,15 @@ export type Build = typeof builds.$inferSelect;
 export type InsertBuild = z.infer<typeof insertBuildSchema>;
 export type Vote = typeof votes.$inferSelect;
 export type InsertVote = z.infer<typeof insertVoteSchema>;
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type AnonBookmark = typeof anonBookmarks.$inferSelect;
+export type Report = typeof reports.$inferSelect;
 
 // Extended response types
 export type BuildWithSubmitter = Build & {
   submitterName: string;
   submitterKarma: number;
+  submitterAvatar: string;
   seasonSlug: string | null;
   seasonName: string | null;
   gameModeName: string | null;
@@ -172,6 +229,7 @@ export type BuildWithSubmitter = Build & {
   gameSlug: string;
   gameIcon: string;
   gameColor: string;
+  bookmarkCount: number;
 };
 
 export type GameWithMeta = Game & {

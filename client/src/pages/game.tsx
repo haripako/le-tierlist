@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import BuildCard from "@/components/build-card";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Flame, Zap } from "lucide-react";
 import type { GameWithMeta, BuildWithSubmitter, GameMode } from "@shared/schema";
 
 type TierBuild = BuildWithSubmitter & { score: number; ratio: number; tier: string };
@@ -21,6 +21,7 @@ export default function GamePage() {
   const [seasonId, setSeasonId] = useState<string>("all");
   const [gameModeId, setGameModeId] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"tier-list" | "trending" | "viral">("tier-list");
 
   // Fetch game info
   const { data: game, isLoading: gameLoading } = useQuery<GameWithMeta>({
@@ -147,6 +148,37 @@ export default function GamePage() {
         </div>
       </div>
 
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode("tier-list")}
+          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+            viewMode === "tier-list" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground border border-border"
+          }`}
+          data-testid="button-view-tierlist"
+        >
+          Tier List
+        </button>
+        <button
+          onClick={() => setViewMode("trending")}
+          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            viewMode === "trending" ? "bg-orange-500 text-white" : "bg-card text-muted-foreground hover:text-foreground border border-border"
+          }`}
+          data-testid="button-view-trending"
+        >
+          <Flame className="w-3.5 h-3.5" /> Trending
+        </button>
+        <button
+          onClick={() => setViewMode("viral")}
+          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            viewMode === "viral" ? "bg-purple-500 text-white" : "bg-card text-muted-foreground hover:text-foreground border border-border"
+          }`}
+          data-testid="button-view-viral"
+        >
+          <Zap className="w-3.5 h-3.5" /> Viral
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3" data-testid="filters-section">
         {/* Season filter — only show if game has seasons */}
@@ -203,8 +235,47 @@ export default function GamePage() {
         )}
       </div>
 
+      {/* Trending / Viral views */}
+      {viewMode === "trending" && (
+        <div className="space-y-4" data-testid="section-trending">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <h2 className="text-sm font-semibold text-orange-400">Trending Builds for {game.name}</h2>
+          </div>
+          {filteredTierList && Object.values(filteredTierList).flat().filter((b: any) => b.isTrending).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No trending builds for this game yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredTierList && (Object.values(filteredTierList).flat() as TierBuild[]).filter(b => b.isTrending).map(build => (
+                <BuildCard key={build.id} build={build} tier={build.tier || "C"} gameSlug={gameSlug}
+                  invalidateKey={["/api/games", gameSlug, "tier-list", seasonId, gameModeId]} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewMode === "viral" && (
+        <div className="space-y-4" data-testid="section-viral">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-purple-400" />
+            <h2 className="text-sm font-semibold text-purple-400">Viral Builds for {game.name}</h2>
+          </div>
+          {filteredTierList && Object.values(filteredTierList).flat().filter((b: any) => b.isViral).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No viral builds for this game yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredTierList && (Object.values(filteredTierList).flat() as TierBuild[]).filter(b => b.isViral).map(build => (
+                <BuildCard key={build.id} build={build} tier={build.tier || "C"} gameSlug={gameSlug}
+                  invalidateKey={["/api/games", gameSlug, "tier-list", seasonId, gameModeId]} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tier List */}
-      {tierLoading ? (
+      {viewMode === "tier-list" && tierLoading ? (
         <div className="space-y-6">
           {["S", "A", "B", "C", "D"].map(tier => (
             <div key={tier} className="space-y-3">
@@ -215,7 +286,7 @@ export default function GamePage() {
             </div>
           ))}
         </div>
-      ) : filteredTierList ? (
+      ) : viewMode === "tier-list" && filteredTierList ? (
         <div className="space-y-6">
           {(["S", "A", "B", "C", "D"] as const).map(tier => {
             const tierBuilds = (filteredTierList[tier] || []) as TierBuild[];

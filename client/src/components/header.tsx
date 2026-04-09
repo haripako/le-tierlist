@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Plus, Home, LogIn, LogOut, User, Shield, Star } from "lucide-react";
+import { Plus, Home, LogIn, LogOut, User, Shield, Star, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -132,6 +132,11 @@ export default function Header() {
                   <Link href={`/user/${user!.id}`}>
                     <DropdownMenuItem data-testid="link-profile">
                       <User className="w-3.5 h-3.5 mr-2" /> Profile
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/settings">
+                    <DropdownMenuItem data-testid="link-settings">
+                      <Settings className="w-3.5 h-3.5 mr-2" /> Settings
                     </DropdownMenuItem>
                   </Link>
                   {isAdmin && (

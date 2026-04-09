@@ -4,10 +4,22 @@ import { apiRequest } from "@/lib/queryClient";
 import { getCategoryLabel } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Layers, ChevronRight, Trophy, TrendingUp, Zap } from "lucide-react";
-import type { GameWithMeta } from "@shared/schema";
+import { Layers, ChevronRight, Trophy, TrendingUp, Zap, Flame } from "lucide-react";
+import type { GameWithMeta, BuildWithSubmitter } from "@shared/schema";
 
-const CATEGORY_ORDER = ["arpg", "looter-shooter", "mmo", "other"];
+const CATEGORY_ORDER = ["arpg", "looter-shooter", "mmo", "survival", "other"];
+
+type FeaturedResponse = {
+  featured: GameWithMeta | null;
+  trending: GameWithMeta[];
+};
+
+function getTierColor(score: number): string {
+  if (score > 100) return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40";
+  if (score > 50) return "bg-green-500/20 text-green-400 border border-green-500/40";
+  if (score > 20) return "bg-blue-500/20 text-blue-400 border border-blue-500/40";
+  return "bg-muted/20 text-muted-foreground border border-border";
+}
 
 export default function HomePage() {
   const { data: gamesRaw, isLoading } = useQuery<GameWithMeta[]>({
@@ -18,13 +30,28 @@ export default function HomePage() {
     },
   });
 
+  const { data: featuredData, isLoading: featuredLoading } = useQuery<FeaturedResponse>({
+    queryKey: ["/api/games/featured"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/games/featured");
+      return res.json();
+    },
+  });
+
+  const { data: trendingBuilds } = useQuery<BuildWithSubmitter[]>({
+    queryKey: ["/api/builds/trending"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/builds/trending");
+      return res.json();
+    },
+  });
+
   const games = gamesRaw ?? [];
+  const featured = featuredData?.featured ?? null;
+  const trendingGames = featuredData?.trending ?? [];
 
   // Aggregate stats
   const totalBuilds = games.reduce((sum, g) => sum + g.buildCount, 0);
-
-  // Featured game: Last Epoch
-  const featured = games.find(g => g.slug === "last-epoch");
 
   // Group by category
   const grouped: Record<string, GameWithMeta[]> = {};
@@ -120,7 +147,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading || featuredLoading ? (
         <div className="space-y-8">
           <Skeleton className="h-40 w-full rounded-xl" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -129,7 +156,7 @@ export default function HomePage() {
         </div>
       ) : (
         <>
-          {/* Featured */}
+          {/* Dynamic Featured */}
           {featured && (
             <Link href={`/game/${featured.slug}`}>
               <div
@@ -141,7 +168,6 @@ export default function HomePage() {
                   className="absolute top-0 right-0 w-48 h-full opacity-10 rounded-xl"
                   style={{ background: `radial-gradient(circle, ${featured.color} 0%, transparent 70%)` }}
                 />
-                {/* Subtle animated shine on hover */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                   style={{ background: `linear-gradient(105deg, transparent 40%, ${featured.color}08 50%, transparent 60%)` }}
                 />
@@ -173,6 +199,79 @@ export default function HomePage() {
                 </div>
               </div>
             </Link>
+          )}
+
+          {/* Trending Games */}
+          {trendingGames.length > 0 && (
+            <section className="space-y-3" data-testid="section-trending-games">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-orange-400" />
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Trending This Week</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {trendingGames.map(game => (
+                  <Link key={game.id} href={`/game/${game.slug}`}>
+                    <div
+                      className="relative rounded-lg border border-border bg-card cursor-pointer group transition-all hover:shadow-md hover:shadow-black/10 overflow-hidden p-4 flex items-center gap-3"
+                      style={{ borderLeftColor: game.color, borderLeftWidth: 3 }}
+                      data-testid={`card-trending-game-${game.slug}`}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                        style={{ background: `${game.color}18` }}
+                      >
+                        {game.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{game.name}</p>
+                        <p className="text-xs text-muted-foreground">{game.buildCount} builds</p>
+                      </div>
+                      <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Trending Builds section */}
+          {trendingBuilds && trendingBuilds.length > 0 && (
+            <section className="space-y-3" data-testid="section-trending-builds">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-orange-400" />
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">🔥 Trending Builds</h2>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {trendingBuilds.slice(0, 8).map(build => {
+                  const score = build.upvotes - build.downvotes;
+                  return (
+                    <Link key={build.id} href={`/build/${build.id}`}>
+                      <div
+                        className="shrink-0 w-52 rounded-lg border border-border bg-card p-3 cursor-pointer group hover:border-orange-500/40 transition-all"
+                        data-testid={`card-trending-build-${build.id}`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">{build.gameIcon}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">{build.gameName}</span>
+                        </div>
+                        <p className="text-xs font-semibold text-foreground group-hover:text-primary truncate mb-1.5">{build.name}</p>
+                        <div className="flex items-center gap-2">
+                          {build.isTrending && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">🔥 Trending</span>
+                          )}
+                          {build.isViral && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">⚡ Viral</span>
+                          )}
+                        </div>
+                        <p className={`text-xs font-bold mt-1.5 ${score > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                          {score > 0 ? "+" : ""}{score} pts
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
           {/* Games by category */}

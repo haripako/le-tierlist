@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, ExternalLink, BookOpen } from "lucide-react";
+import { Trash2, ExternalLink, BookOpen, BarChart2 } from "lucide-react";
 import { SOURCE_CONFIG } from "@/lib/constants";
 import type { GameWithMeta, BuildWithSubmitter } from "@shared/schema";
 
@@ -17,6 +21,15 @@ export default function AdminBuildsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedGameId, setSelectedGameId] = useState<string>("all");
+  const [socialEditBuild, setSocialEditBuild] = useState<BuildWithSubmitter | null>(null);
+
+  // Social edit state
+  const [sSocialScore, setSSocialScore] = useState("0");
+  const [sSocialViews, setSSocialViews] = useState("0");
+  const [sSocialShares, setSSocialShares] = useState("0");
+  const [sIsTrending, setSIsTrending] = useState(false);
+  const [sIsViral, setSIsViral] = useState(false);
+  const [sTrendingReason, setSTrendingReason] = useState("");
 
   const { data: games } = useQuery<GameWithMeta[]>({
     queryKey: ["/api/games"],
@@ -44,13 +57,39 @@ export default function AdminBuildsPage() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const TIER_COLORS: Record<string, string> = {
-    S: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
-    A: "bg-green-500/20 text-green-400 border-green-500/40",
-    B: "bg-blue-500/20 text-blue-400 border-blue-500/40",
-    C: "bg-purple-500/20 text-purple-400 border-purple-500/40",
-    D: "bg-red-500/20 text-red-400 border-red-500/40",
-  };
+  const socialMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/builds/${id}/social`, {
+        adminUserId: user?.id,
+        socialScore: parseInt(sSocialScore),
+        socialViews: parseInt(sSocialViews),
+        socialShares: parseInt(sSocialShares),
+        isTrending: sIsTrending,
+        isViral: sIsViral,
+        trendingReason: sTrendingReason,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/builds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/builds/trending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/builds/viral"] });
+      toast({ title: "Social metrics updated" });
+      setSocialEditBuild(null);
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  function openSocialEdit(build: BuildWithSubmitter) {
+    setSocialEditBuild(build);
+    setSSocialScore(String((build as any).socialScore ?? 0));
+    setSSocialViews(String((build as any).socialViews ?? 0));
+    setSSocialShares(String((build as any).socialShares ?? 0));
+    setSIsTrending(!!(build as any).isTrending);
+    setSIsViral(!!(build as any).isViral);
+    setSTrendingReason((build as any).trendingReason ?? "");
+  }
 
   return (
     <AdminLayout title="Builds">
@@ -87,6 +126,8 @@ export default function AdminBuildsPage() {
               <div className="space-y-2">
                 {(builds ?? []).map(build => {
                   const srcConfig = SOURCE_CONFIG[build.sourceType] ?? SOURCE_CONFIG["other"];
+                  const isTrending = !!(build as any).isTrending;
+                  const isViral = !!(build as any).isViral;
                   return (
                     <div key={build.id} className="flex items-center gap-3 p-3 rounded-lg border border-border" data-testid={`build-row-${build.id}`}>
                       <div className="flex-1 min-w-0">
@@ -97,15 +138,21 @@ export default function AdminBuildsPage() {
                           {build.gameModeName && (
                             <Badge variant="secondary" className="text-[10px]">{build.gameModeName}</Badge>
                           )}
+                          {isTrending && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400">🔥</span>}
+                          {isViral && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400">⚡</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <span className={`${srcConfig.color}`}>{srcConfig.icon} {srcConfig.name}</span>
                           <span>·</span>
                           <span>↑{build.upvotes} ↓{build.downvotes}</span>
                           <span>· by {build.submitterName}</span>
+                          {(build as any).socialScore > 0 && <span>· 📱 {(build as any).socialScore}</span>}
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
+                        <Button size="sm" variant="ghost" onClick={() => openSocialEdit(build)} title="Edit social metrics" data-testid={`button-social-build-${build.id}`}>
+                          <BarChart2 className="w-3.5 h-3.5" />
+                        </Button>
                         <a href={build.guideUrl} target="_blank" rel="noopener noreferrer">
                           <Button size="sm" variant="ghost" data-testid={`button-view-build-${build.id}`}>
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -129,6 +176,53 @@ export default function AdminBuildsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Social metrics dialog */}
+      <Dialog open={!!socialEditBuild} onOpenChange={open => { if (!open) setSocialEditBuild(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Social Metrics: {socialEditBuild?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Social Score</Label>
+                <Input type="number" value={sSocialScore} onChange={e => setSSocialScore(e.target.value)} data-testid="input-social-score" />
+              </div>
+              <div className="space-y-2">
+                <Label>Social Views</Label>
+                <Input type="number" value={sSocialViews} onChange={e => setSSocialViews(e.target.value)} data-testid="input-social-views" />
+              </div>
+              <div className="space-y-2">
+                <Label>Social Shares</Label>
+                <Input type="number" value={sSocialShares} onChange={e => setSSocialShares(e.target.value)} data-testid="input-social-shares" />
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch checked={sIsTrending} onCheckedChange={setSIsTrending} data-testid="switch-is-trending" />
+                <Label>🔥 Trending</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={sIsViral} onCheckedChange={setSIsViral} data-testid="switch-is-viral" />
+                <Label>⚡ Viral</Label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Trending Reason (optional)</Label>
+              <Input value={sTrendingReason} onChange={e => setSTrendingReason(e.target.value)} placeholder="e.g. Featured by streamer X" data-testid="input-trending-reason" />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => socialEditBuild && socialMutation.mutate(socialEditBuild.id)}
+              disabled={socialMutation.isPending}
+              data-testid="button-save-social"
+            >
+              {socialMutation.isPending ? "Saving..." : "Save Social Metrics"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

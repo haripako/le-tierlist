@@ -1,12 +1,13 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage, verifyPassword, detectSource } from "./storage";
-import { insertBuildSchema, insertSeasonSchema, insertGameSchema, insertGameClassSchema, insertGameModeSchema } from "@shared/schema";
+import { insertBuildSchema, insertSeasonSchema, insertGameSchema, insertGameClassSchema, insertGameModeSchema, insertCategorySchema } from "@shared/schema";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { extractBuildFromUrl } from "./extract";
 import { generateSocialPosts, getTierFromScore } from "./social";
 import crypto from "crypto";
+import { hashPassword as hashPwd } from "./hashutil";
 
 // ─── Voter identity (cookie-based, stable across requests) ─────
 
@@ -142,6 +143,71 @@ function initDB() {
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL
   )`);
+
+  // Categories
+  db.run(sql`CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    icon TEXT NOT NULL DEFAULT '🎮',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )`);
+
+  // Bookmarks
+  db.run(sql`CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    build_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_bookmarks_unique ON bookmarks(build_id, user_id)`);
+
+  // Anonymous bookmarks
+  db.run(sql`CREATE TABLE IF NOT EXISTS anon_bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    voter_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_anon_bookmarks_unique ON anon_bookmarks(build_id, voter_hash)`);
+
+  // Reports
+  db.run(sql`CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    voter_hash TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT 'inappropriate',
+    created_at TEXT NOT NULL
+  )`);
+
+  // Add new columns to existing tables if not exists
+  try { db.run(sql`ALTER TABLE users ADD COLUMN bio TEXT`); } catch {}
+  try { db.run(sql`ALTER TABLE users ADD COLUMN avatar_emoji TEXT DEFAULT '🎮'`); } catch {}
+  try { db.run(sql`ALTER TABLE games ADD COLUMN last_featured_at TEXT`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN views INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN social_score INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN social_views INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN social_shares INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN is_trending INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN is_viral INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN trending_reason TEXT`); } catch {}
+
+  // Seed categories if empty
+  const catCount = db.all(sql`SELECT count(*) as c FROM categories`);
+  // @ts-ignore
+  if (catCount[0]?.c === 0) {
+    const catData = [
+      { name: "ARPG", slug: "arpg", icon: "⚔️", sortOrder: 100 },
+      { name: "Looter-Shooter", slug: "looter-shooter", icon: "🔫", sortOrder: 80 },
+      { name: "MMORPG", slug: "mmo", icon: "🌍", sortOrder: 60 },
+      { name: "Survival", slug: "survival", icon: "🏕️", sortOrder: 40 },
+      { name: "Other", slug: "other", icon: "🎮", sortOrder: 0 },
+    ];
+    for (const c of catData) {
+      storage.createCategory({ name: c.name, slug: c.slug, icon: c.icon, sortOrder: c.sortOrder });
+    }
+  }
 
   // Seed if empty
   const gameCount = db.all(sql`SELECT count(*) as c FROM games`);
@@ -917,6 +983,43 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json(result);
   });
 
+  // IMPORTANT: static routes must come before /:slug to avoid conflict
+  app.get("/api/games/featured", (req, res) => {
+    const allGames = storage.getGames();
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date().toISOString();
+
+    const scored = allGames.map(game => {
+      const allBuilds = db.all(sql`SELECT id, upvotes, downvotes, created_at FROM builds WHERE game_id = ${game.id}`) as any[];
+      const newBuildsThisWeek = allBuilds.filter(b => b.created_at >= weekAgo).length;
+      const totalVotesThisWeek = allBuilds.filter(b => b.created_at >= weekAgo).reduce((sum: number, b: any) => sum + b.upvotes + b.downvotes, 0);
+      const totalBuilds = allBuilds.length;
+      const activityScore = (newBuildsThisWeek * 3) + (totalVotesThisWeek * 1) + (totalBuilds * 0.5);
+      let rotationBonus = 0;
+      if (!game.lastFeaturedAt) {
+        rotationBonus = 50;
+      } else {
+        const daysSince = (Date.now() - new Date(game.lastFeaturedAt).getTime()) / (1000 * 60 * 60 * 24);
+        rotationBonus = Math.min(daysSince * 5, 100);
+      }
+      return { ...game, activityScore: activityScore + rotationBonus };
+    });
+
+    scored.sort((a, b) => b.activityScore - a.activityScore);
+    const feat = scored[0];
+    const trending = scored.slice(1, 4);
+    if (feat) db.run(sql`UPDATE games SET last_featured_at = ${now} WHERE id = ${feat.id}`);
+
+    const enrichGame = (g: any) => {
+      const classes = storage.getGameClasses(g.id);
+      const activeSeasons = storage.getSeasonsByGame(g.id).filter(s => s.isActive);
+      const modes = storage.getGameModes(g.id);
+      const buildCount = (db.all(sql`SELECT count(*) as c FROM builds WHERE game_id = ${g.id}`) as any[])[0]?.c ?? 0;
+      return { ...g, classes, activeSeasons, modes, buildCount };
+    };
+    res.json({ featured: feat ? enrichGame(feat) : null, trending: trending.map(enrichGame) });
+  });
+
   app.get("/api/games/:slug", (req, res) => {
     const game = storage.getGameBySlug(req.params.slug);
     if (!game) return res.status(404).json({ error: "Game not found" });
@@ -1106,9 +1209,21 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json(buildTierList(allBuilds));
   });
 
+  // Trending builds
+  app.get("/api/builds/trending", (req, res) => {
+    res.json(storage.getTrendingBuilds());
+  });
+
+  // Viral builds
+  app.get("/api/builds/viral", (req, res) => {
+    res.json(storage.getViralBuilds());
+  });
+
   app.get("/api/builds/:id", (req, res) => {
     const build = storage.getBuild(parseInt(req.params.id));
     if (!build) return res.status(404).json({ error: "Build not found" });
+    // Increment view count
+    db.run(sql`UPDATE builds SET views = COALESCE(views, 0) + 1 WHERE id = ${parseInt(req.params.id)}`);
     res.json(build);
   });
 
@@ -1175,6 +1290,92 @@ export async function registerRoutes(server: Server, app: Express) {
     const admin = storage.getUserById(adminUserId);
     if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
     storage.deleteBuild(parseInt(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // ── Social metrics ──
+  app.patch("/api/builds/:id/social", (req, res) => {
+    const { adminUserId, socialScore, socialViews, socialShares, isTrending, isViral, trendingReason } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateBuildSocialMetrics(parseInt(req.params.id), {
+      socialScore, socialViews, socialShares, isTrending, isViral, trendingReason,
+    });
+    if (!updated) return res.status(404).json({ error: "Build not found" });
+    res.json(updated);
+  });
+
+  // ── Bookmarks ──
+  app.post("/api/builds/:id/bookmark", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const result = storage.toggleBookmark(buildId, userId);
+    res.json({ ...result, bookmarkCount: storage.getBookmarkCount(buildId) });
+  });
+
+  app.post("/api/builds/:id/anon-bookmark", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const voterHash = getVoterHash(req, res);
+    const result = storage.toggleAnonBookmark(buildId, voterHash);
+    res.json({ ...result, bookmarkCount: storage.getBookmarkCount(buildId), voterHash });
+  });
+
+  app.get("/api/builds/:id/bookmark-count", (req, res) => {
+    res.json({ count: storage.getBookmarkCount(parseInt(req.params.id)) });
+  });
+
+  app.get("/api/bookmarks/user/:userId", (req, res) => {
+    res.json(storage.getUserBookmarks(parseInt(req.params.userId)));
+  });
+
+  app.get("/api/bookmarks/anon/:voterHash", (req, res) => {
+    res.json(storage.getAnonBookmarks(req.params.voterHash));
+  });
+
+  // ── Reports ──
+  app.post("/api/builds/:id/report", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const voterHash = getVoterHash(req, res);
+    const reason = req.body.reason || "inappropriate";
+    const report = storage.createReport(buildId, voterHash, reason);
+    res.json(report);
+  });
+
+  app.get("/api/admin/reports", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    res.json(storage.getReports());
+  });
+
+  // ── Categories ──
+  app.get("/api/categories", (req, res) => {
+    res.json(storage.getCategories());
+  });
+
+  app.post("/api/categories", (req, res) => {
+    const { adminUserId, name, slug, icon, sortOrder } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const cat = storage.createCategory({ name, slug, icon: icon || "🎮", sortOrder: sortOrder || 0 });
+    res.status(201).json(cat);
+  });
+
+  app.patch("/api/categories/:id", (req, res) => {
+    const { adminUserId, name, slug, icon, sortOrder } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateCategory(parseInt(req.params.id), { name, slug, icon, sortOrder });
+    if (!updated) return res.status(404).json({ error: "Category not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/categories/:id", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    storage.deleteCategory(parseInt(req.params.id));
     res.json({ ok: true });
   });
 
@@ -1442,6 +1643,8 @@ export async function registerRoutes(server: Server, app: Express) {
       }
     }
     db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
+    // Migrate anon bookmarks
+    storage.migrateAnonBookmarks(voterHash, user.id);
 
     const refreshed = storage.getUserById(user.id);
     const { passwordHash, ...safe } = refreshed || user;
@@ -1469,6 +1672,8 @@ export async function registerRoutes(server: Server, app: Express) {
       }
     }
     db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
+    // Migrate anon bookmarks
+    storage.migrateAnonBookmarks(voterHash, user.id);
 
     const refreshed = storage.getUserById(user.id);
     const { passwordHash, ...safe } = refreshed || user;
@@ -1480,12 +1685,41 @@ export async function registerRoutes(server: Server, app: Express) {
     if (!user) return res.status(404).json({ error: "User not found" });
     const { passwordHash, ...safe } = user;
     const userBuilds = storage.getUserBuilds(user.id);
-    res.json({ ...safe, builds: userBuilds });
+    const bookmarksCount = storage.getUserBookmarks(user.id).length;
+    res.json({ ...safe, builds: userBuilds, bookmarksCount });
   });
 
   app.get("/api/users/top/leaderboard", (req, res) => {
     const topUsers = storage.getTopUsers(20);
     res.json(topUsers.map(({ passwordHash, ...u }) => u));
+  });
+
+  app.patch("/api/auth/password", (req, res) => {
+    const { userId, currentPassword, newPassword } = req.body;
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: "userId, currentPassword, and newPassword required" });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: "New password must be at least 4 characters" });
+    }
+    const user = storage.getUserById(parseInt(userId));
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!verifyPassword(currentPassword, user.passwordHash)) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+    const newHash = hashPwd(newPassword);
+    storage.updatePassword(user.id, newHash);
+    res.json({ ok: true });
+  });
+
+  app.patch("/api/users/:id", (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { bio, avatarEmoji } = req.body;
+    const updated = storage.updateUser(userId, { bio, avatarEmoji });
+    if (!updated) return res.status(404).json({ error: "User not found" });
+    const { passwordHash, ...safe } = updated;
+    // Migrate anon bookmarks on any user update (triggers on login context too)
+    res.json(safe);
   });
 
   // ── Source detection & extraction ──

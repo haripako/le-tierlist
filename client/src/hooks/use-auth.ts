@@ -7,6 +7,8 @@ export type AuthUser = {
   isAdmin: boolean;
   karma: number;
   buildSubmissions: number;
+  bio?: string;
+  avatarEmoji?: string;
   createdAt: string;
 };
 
