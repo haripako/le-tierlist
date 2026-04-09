@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import HomePage from "./pages/home";
 import SubmitBuildPage from "./pages/submit-build";
 import BuildDetailPage from "./pages/build-detail";
+import UserProfilePage from "./pages/user-profile";
+import AdminSeasonsPage from "./pages/admin-seasons";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
 
@@ -18,6 +20,8 @@ function AppRouter() {
           <Route path="/" component={HomePage} />
           <Route path="/submit" component={SubmitBuildPage} />
           <Route path="/build/:id" component={BuildDetailPage} />
+          <Route path="/user/:id" component={UserProfilePage} />
+          <Route path="/admin/seasons" component={AdminSeasonsPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

@@ -1,104 +1,268 @@
-import { builds, votes, type Build, type InsertBuild, type Vote, type InsertVote } from "@shared/schema";
+import {
+  users, seasons, builds, votes,
+  type User, type InsertUser,
+  type Season, type InsertSeason,
+  type Build, type InsertBuild,
+  type Vote, type InsertVote,
+  type BuildWithSubmitter,
+  BUILD_SOURCES,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, asc } from "drizzle-orm";
+import crypto from "crypto";
 
-export interface IStorage {
-  // Builds
-  getBuilds(filters?: { seasonId?: string; gameMode?: string; className?: string; mastery?: string }): Build[];
-  getBuild(id: number): Build | undefined;
-  createBuild(build: InsertBuild): Build;
-  
-  // Votes
-  getVote(buildId: number, voterId: string): Vote | undefined;
-  castVote(vote: InsertVote): Vote;
-  removeVote(buildId: number, voterId: string): void;
-  getVoterVotes(voterId: string): Vote[];
+// ─── Helpers ───────────────────────────────────────────────────
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
 }
 
+export function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
+
+export function detectSource(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    const found = BUILD_SOURCES.find(s => s.domain && hostname.includes(s.domain));
+    return found?.id ?? "other";
+  } catch {
+    return "other";
+  }
+}
+
+// ─── Storage interface ─────────────────────────────────────────
+
+export interface IStorage {
+  // Users
+  createUser(user: InsertUser): User;
+  getUserByUsername(username: string): User | undefined;
+  getUserById(id: number): User | undefined;
+  updateKarma(userId: number, delta: number): void;
+  getTopUsers(limit?: number): User[];
+
+  // Seasons
+  getSeasons(): Season[];
+  getActiveSeason(): Season | undefined;
+  getSeason(id: number): Season | undefined;
+  getSeasonBySlug(slug: string): Season | undefined;
+  createSeason(season: InsertSeason): Season;
+  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined;
+  deleteSeason(id: number): void;
+
+  // Builds
+  getBuilds(filters?: { seasonId?: number; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[];
+  getBuild(id: number): BuildWithSubmitter | undefined;
+  createBuild(build: InsertBuild): Build;
+  getUserBuilds(userId: number): BuildWithSubmitter[];
+
+  // Votes
+  getVote(buildId: number, userId: number): Vote | undefined;
+  castVote(buildId: number, userId: number, voteType: string): Vote;
+  removeVote(buildId: number, userId: number): void;
+  getUserVotes(userId: number): Vote[];
+}
+
+// ─── Database storage ──────────────────────────────────────────
+
 export class DatabaseStorage implements IStorage {
-  getBuilds(filters?: { seasonId?: string; gameMode?: string; className?: string; mastery?: string }): Build[] {
-    let query = db.select().from(builds);
-    
+
+  // ── Users ──
+
+  createUser(user: InsertUser): User {
+    return db.insert(users).values({
+      ...user,
+      passwordHash: hashPassword(user.passwordHash),
+      karma: 0,
+      buildSubmissions: 0,
+      isAdmin: false,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getUserByUsername(username: string): User | undefined {
+    return db.select().from(users).where(eq(users.username, username)).get();
+  }
+
+  getUserById(id: number): User | undefined {
+    return db.select().from(users).where(eq(users.id, id)).get();
+  }
+
+  updateKarma(userId: number, delta: number): void {
+    db.run(sql`UPDATE users SET karma = karma + ${delta} WHERE id = ${userId}`);
+  }
+
+  getTopUsers(limit = 20): User[] {
+    return db.select().from(users).orderBy(desc(users.karma)).limit(limit).all();
+  }
+
+  // ── Seasons ──
+
+  getSeasons(): Season[] {
+    return db.select().from(seasons).orderBy(desc(seasons.sortOrder)).all();
+  }
+
+  getActiveSeason(): Season | undefined {
+    return db.select().from(seasons)
+      .where(eq(seasons.isActive, true))
+      .orderBy(desc(seasons.sortOrder))
+      .get();
+  }
+
+  getSeason(id: number): Season | undefined {
+    return db.select().from(seasons).where(eq(seasons.id, id)).get();
+  }
+
+  getSeasonBySlug(slug: string): Season | undefined {
+    return db.select().from(seasons).where(eq(seasons.slug, slug)).get();
+  }
+
+  createSeason(season: InsertSeason): Season {
+    return db.insert(seasons).values({
+      ...season,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined {
+    db.update(seasons).set(data).where(eq(seasons.id, id)).run();
+    return this.getSeason(id);
+  }
+
+  deleteSeason(id: number): void {
+    db.delete(seasons).where(eq(seasons.id, id)).run();
+  }
+
+  // ── Builds ──
+
+  private enrichBuild(build: Build): BuildWithSubmitter {
+    const submitter = this.getUserById(build.submitterId);
+    const season = this.getSeason(build.seasonId);
+    return {
+      ...build,
+      submitterName: submitter?.username ?? "Unknown",
+      submitterKarma: submitter?.karma ?? 0,
+      seasonSlug: season?.slug ?? "",
+      seasonName: season?.name ?? "",
+    };
+  }
+
+  getBuilds(filters?: { seasonId?: number; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[] {
     const conditions = [];
     if (filters?.seasonId) conditions.push(eq(builds.seasonId, filters.seasonId));
     if (filters?.gameMode) conditions.push(eq(builds.gameMode, filters.gameMode));
     if (filters?.className) conditions.push(eq(builds.className, filters.className));
     if (filters?.mastery) conditions.push(eq(builds.mastery, filters.mastery));
-    
+
+    let rows: Build[];
     if (conditions.length > 0) {
-      return query.where(and(...conditions)).orderBy(desc(builds.upvotes)).all();
+      rows = db.select().from(builds).where(and(...conditions)).orderBy(desc(builds.upvotes)).all();
+    } else {
+      rows = db.select().from(builds).orderBy(desc(builds.upvotes)).all();
     }
-    return query.orderBy(desc(builds.upvotes)).all();
+    return rows.map(b => this.enrichBuild(b));
   }
 
-  getBuild(id: number): Build | undefined {
-    return db.select().from(builds).where(eq(builds.id, id)).get();
+  getBuild(id: number): BuildWithSubmitter | undefined {
+    const row = db.select().from(builds).where(eq(builds.id, id)).get();
+    return row ? this.enrichBuild(row) : undefined;
   }
 
   createBuild(build: InsertBuild): Build {
-    return db.insert(builds).values({
+    const sourceType = detectSource(build.guideUrl);
+    const created = db.insert(builds).values({
       ...build,
+      sourceType,
       upvotes: 0,
       downvotes: 0,
       createdAt: new Date().toISOString(),
     }).returning().get();
+
+    // Increment submitter's build count
+    db.run(sql`UPDATE users SET build_submissions = build_submissions + 1 WHERE id = ${build.submitterId}`);
+
+    return created;
   }
 
-  getVote(buildId: number, voterId: string): Vote | undefined {
+  getUserBuilds(userId: number): BuildWithSubmitter[] {
+    const rows = db.select().from(builds)
+      .where(eq(builds.submitterId, userId))
+      .orderBy(desc(builds.createdAt))
+      .all();
+    return rows.map(b => this.enrichBuild(b));
+  }
+
+  // ── Votes ──
+
+  getVote(buildId: number, userId: number): Vote | undefined {
     return db.select().from(votes)
-      .where(and(eq(votes.buildId, buildId), eq(votes.voterId, voterId)))
+      .where(and(eq(votes.buildId, buildId), eq(votes.userId, userId)))
       .get();
   }
 
-  castVote(vote: InsertVote): Vote {
-    // Remove any existing vote first
-    const existing = this.getVote(vote.buildId, vote.voterId);
+  castVote(buildId: number, userId: number, voteType: string): Vote {
+    const existing = this.getVote(buildId, userId);
+    const build = db.select().from(builds).where(eq(builds.id, buildId)).get();
+    if (!build) throw new Error("Build not found");
+
     if (existing) {
       // Remove old vote effect
-      if (existing.voteType === "up") {
-        db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${vote.buildId}`);
-      } else {
-        db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${vote.buildId}`);
-      }
-      db.delete(votes)
-        .where(and(eq(votes.buildId, vote.buildId), eq(votes.voterId, vote.voterId)))
-        .run();
-    }
-
-    // Insert new vote
-    const newVote = db.insert(votes).values({
-      ...vote,
-      createdAt: new Date().toISOString(),
-    }).returning().get();
-
-    // Add new vote effect
-    if (vote.voteType === "up") {
-      db.run(sql`UPDATE builds SET upvotes = upvotes + 1 WHERE id = ${vote.buildId}`);
-    } else {
-      db.run(sql`UPDATE builds SET downvotes = downvotes + 1 WHERE id = ${vote.buildId}`);
-    }
-
-    return newVote;
-  }
-
-  removeVote(buildId: number, voterId: string): void {
-    const existing = this.getVote(buildId, voterId);
-    if (existing) {
+      const oldDelta = existing.voteType === "up" ? -1 : 1;
       if (existing.voteType === "up") {
         db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
       } else {
         db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
       }
+      // Reverse karma on submitter
+      this.updateKarma(build.submitterId, oldDelta);
+
       db.delete(votes)
-        .where(and(eq(votes.buildId, buildId), eq(votes.voterId, voterId)))
+        .where(and(eq(votes.buildId, buildId), eq(votes.userId, userId)))
         .run();
     }
+
+    // Insert new vote
+    const newVote = db.insert(votes).values({
+      buildId,
+      userId,
+      voteType,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+
+    // Apply new vote effect
+    if (voteType === "up") {
+      db.run(sql`UPDATE builds SET upvotes = upvotes + 1 WHERE id = ${buildId}`);
+      this.updateKarma(build.submitterId, 1);
+    } else {
+      db.run(sql`UPDATE builds SET downvotes = downvotes + 1 WHERE id = ${buildId}`);
+      this.updateKarma(build.submitterId, -1);
+    }
+
+    return newVote;
   }
 
-  getVoterVotes(voterId: string): Vote[] {
-    return db.select().from(votes).where(eq(votes.voterId, voterId)).all();
+  removeVote(buildId: number, userId: number): void {
+    const existing = this.getVote(buildId, userId);
+    if (!existing) return;
+
+    const build = db.select().from(builds).where(eq(builds.id, buildId)).get();
+    if (!build) return;
+
+    if (existing.voteType === "up") {
+      db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
+      this.updateKarma(build.submitterId, -1);
+    } else {
+      db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
+      this.updateKarma(build.submitterId, 1);
+    }
+    db.delete(votes)
+      .where(and(eq(votes.buildId, buildId), eq(votes.userId, userId)))
+      .run();
   }
 
+  getUserVotes(userId: number): Vote[] {
+    return db.select().from(votes).where(eq(votes.userId, userId)).all();
+  }
 }
 
 export const storage = new DatabaseStorage();
