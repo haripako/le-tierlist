@@ -4,6 +4,8 @@ import { storage, verifyPassword, detectSource } from "./storage";
 import { insertBuildSchema, insertSeasonSchema } from "@shared/schema";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { extractBuildFromUrl } from "./extract";
+import crypto from "crypto";
 
 // ─── DB init ───────────────────────────────────────────────────
 
@@ -55,6 +57,16 @@ function initDB() {
   )`);
 
   db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_votes_unique ON votes(build_id, user_id)`);
+
+  // Anonymous votes table (session-based voting without registration)
+  db.run(sql`CREATE TABLE IF NOT EXISTS anon_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    voter_hash TEXT NOT NULL,
+    vote_type TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_anon_votes_unique ON anon_votes(build_id, voter_hash)`);
 
   // Seed if empty
   const userCount = db.all(sql`SELECT count(*) as c FROM users`);
@@ -311,5 +323,106 @@ export async function registerRoutes(server: Server, app: Express) {
   app.post("/api/detect-source", (req, res) => {
     const { url } = req.body;
     res.json({ source: detectSource(url || "") });
+  });
+
+  // ── Build extraction from URL ──
+
+  app.post("/api/extract-build", async (req, res) => {
+    const { url } = req.body;
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({ error: "URL is required" });
+    }
+    try {
+      new URL(url); // validate URL
+    } catch {
+      return res.status(400).json({ error: "Invalid URL" });
+    }
+    try {
+      const extracted = await extractBuildFromUrl(url);
+      res.json(extracted);
+    } catch (e: any) {
+      res.status(500).json({ error: "Failed to extract build info", details: e.message });
+    }
+  });
+
+  // ── Anonymous voting ──
+
+  function getVoterHash(req: any): string {
+    // Create a stable hash from IP + User-Agent for anonymous voter identity
+    const ip = req.headers["x-forwarded-for"] || req.ip || "unknown";
+    const ua = req.headers["user-agent"] || "";
+    return crypto.createHash("sha256").update(`${ip}:${ua}`).digest("hex").slice(0, 32);
+  }
+
+  app.post("/api/builds/:id/anon-vote", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const { voteType } = req.body;
+
+    if (!["up", "down"].includes(voteType)) {
+      return res.status(400).json({ error: "Invalid vote type" });
+    }
+
+    const build = storage.getBuild(buildId);
+    if (!build) return res.status(404).json({ error: "Build not found" });
+
+    const voterHash = getVoterHash(req);
+
+    // Check existing anonymous vote
+    const existing = db.all(sql`SELECT * FROM anon_votes WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
+    const existingVote = existing[0] as any;
+
+    if (existingVote) {
+      if (existingVote.vote_type === voteType) {
+        // Same vote — remove it (toggle off)
+        db.run(sql`DELETE FROM anon_votes WHERE id = ${existingVote.id}`);
+        if (voteType === "up") {
+          db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
+          storage.updateKarma(build.submitterId, -1);
+        } else {
+          db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
+          storage.updateKarma(build.submitterId, 1);
+        }
+        const updated = storage.getBuild(buildId);
+        return res.json({ build: updated, action: "removed", voterHash });
+      } else {
+        // Different vote — switch
+        // Remove old vote effect
+        if (existingVote.vote_type === "up") {
+          db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
+          storage.updateKarma(build.submitterId, -1);
+        } else {
+          db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
+          storage.updateKarma(build.submitterId, 1);
+        }
+        // Update to new vote
+        db.run(sql`UPDATE anon_votes SET vote_type = ${voteType}, created_at = ${new Date().toISOString()} WHERE id = ${existingVote.id}`);
+      }
+    } else {
+      // New vote
+      db.run(sql`INSERT INTO anon_votes (build_id, voter_hash, vote_type, created_at) VALUES (${buildId}, ${voterHash}, ${voteType}, ${new Date().toISOString()})`);
+    }
+
+    // Apply new vote effect
+    if (voteType === "up") {
+      db.run(sql`UPDATE builds SET upvotes = upvotes + 1 WHERE id = ${buildId}`);
+      storage.updateKarma(build.submitterId, 1);
+    } else {
+      db.run(sql`UPDATE builds SET downvotes = downvotes + 1 WHERE id = ${buildId}`);
+      storage.updateKarma(build.submitterId, -1);
+    }
+
+    const updated = storage.getBuild(buildId);
+    res.json({ build: updated, action: "voted", voterHash });
+  });
+
+  // Get anonymous vote status for a voter
+  app.get("/api/anon-votes/:voterHash", (req, res) => {
+    const rows = db.all(sql`SELECT build_id, vote_type FROM anon_votes WHERE voter_hash = ${req.params.voterHash}`);
+    res.json(rows);
+  });
+
+  // Get voter hash for current request
+  app.get("/api/voter-hash", (req, res) => {
+    res.json({ voterHash: getVoterHash(req) });
   });
 }

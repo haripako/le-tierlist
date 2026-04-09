@@ -91,6 +91,9 @@ export const insertSeasonSchema = createInsertSchema(seasons).omit({
 
 export const insertBuildSchema = createInsertSchema(builds).omit({
   id: true, upvotes: true, downvotes: true, createdAt: true, sourceType: true,
+}).extend({
+  description: z.string().default(""),
+  mainSkills: z.string().default("[]"),
 });
 
 export const insertVoteSchema = createInsertSchema(votes).omit({

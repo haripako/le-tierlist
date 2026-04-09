@@ -3,9 +3,9 @@ import { ThumbsUp, ThumbsDown, ExternalLink, Star } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useVoter } from "@/hooks/use-voter";
 import { CLASSES, PLAYSTYLES, TIER_CONFIG, SOURCE_CONFIG, getKarmaColor } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import type { BuildWithSubmitter } from "@shared/schema";
 
 interface BuildCardProps {
@@ -17,7 +17,7 @@ interface BuildCardProps {
 
 export default function BuildCard({ build, tier, seasonId, gameMode }: BuildCardProps) {
   const { user, isLoggedIn } = useAuth();
-  const { toast } = useToast();
+  const { voterHash } = useVoter();
   const classInfo = CLASSES.find(c => c.id === build.className);
   const playstyle = PLAYSTYLES.find(p => p.id === build.playstyle);
   const tierConfig = TIER_CONFIG[tier as keyof typeof TIER_CONFIG];
@@ -28,15 +28,18 @@ export default function BuildCard({ build, tier, seasonId, gameMode }: BuildCard
 
   const voteMutation = useMutation({
     mutationFn: async (voteType: "up" | "down") => {
-      if (!isLoggedIn) throw new Error("login");
-      const res = await apiRequest("POST", `/api/builds/${build.id}/vote`, { userId: user!.id, voteType });
-      return res.json();
+      if (isLoggedIn) {
+        // Logged-in user vote (keeps karma tied to their account)
+        const res = await apiRequest("POST", `/api/builds/${build.id}/vote`, { userId: user!.id, voteType });
+        return res.json();
+      } else {
+        // Anonymous vote
+        const res = await apiRequest("POST", `/api/builds/${build.id}/anon-vote`, { voteType });
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tier-list", seasonId, gameMode] });
-    },
-    onError: (e: Error) => {
-      if (e.message === "login") toast({ title: "Sign in required", description: "You need to sign in to vote.", variant: "destructive" });
     },
   });
 

@@ -2,6 +2,7 @@ import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useVoter } from "@/hooks/use-voter";
 import { useToast } from "@/hooks/use-toast";
 import { CLASSES, GAME_MODES, PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ export default function BuildDetailPage() {
   const [, params] = useRoute("/build/:id");
   const buildId = params?.id ? parseInt(params.id) : 0;
   const { user, isLoggedIn } = useAuth();
+  const { voterHash } = useVoter();
   const { toast } = useToast();
 
   const { data: build, isLoading } = useQuery<BuildWithSubmitter>({
@@ -24,16 +26,17 @@ export default function BuildDetailPage() {
 
   const voteMutation = useMutation({
     mutationFn: async (voteType: "up" | "down") => {
-      if (!isLoggedIn) throw new Error("login");
-      const res = await apiRequest("POST", `/api/builds/${buildId}/vote`, { userId: user!.id, voteType });
-      return res.json();
+      if (isLoggedIn) {
+        const res = await apiRequest("POST", `/api/builds/${buildId}/vote`, { userId: user!.id, voteType });
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", `/api/builds/${buildId}/anon-vote`, { voteType });
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/builds", buildId] });
       queryClient.invalidateQueries({ queryKey: ["/api/tier-list"] });
-    },
-    onError: (e: Error) => {
-      if (e.message === "login") toast({ title: "Sign in required", description: "You need to sign in to vote.", variant: "destructive" });
     },
   });
 
