@@ -124,6 +124,7 @@ export interface IStorage {
   // Reports
   createReport(buildId: number, voterHash: string, reason: string): Report;
   getReports(): Report[];
+  deleteReport(id: number): void;
 
   // Social posts
   createSocialPost(post: InsertSocialPost): SocialPost;
@@ -606,7 +607,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   getReports(): Report[] {
-    return db.all(sql`SELECT r.*, b.name as build_name FROM reports r LEFT JOIN builds b ON b.id = r.build_id ORDER BY r.created_at DESC`) as Report[];
+    return db.all(sql`SELECT r.*, b.name as build_name, g.name as game_name FROM reports r LEFT JOIN builds b ON b.id = r.build_id LEFT JOIN games g ON g.id = b.game_id ORDER BY r.created_at DESC`) as Report[];
+  }
+
+  deleteReport(id: number): void {
+    db.run(sql`DELETE FROM reports WHERE id = ${id}`);
   }
 
   // ── Social posts ──

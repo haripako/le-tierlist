@@ -17,6 +17,7 @@ import AdminBuildsPage from "./pages/admin-builds";
 import AdminUsersPage from "./pages/admin-users";
 import AdminSocialPage from "./pages/admin-social";
 import AdminCategoriesPage from "./pages/admin-categories";
+import AdminReportsPage from "./pages/admin-reports";
 import SettingsPage from "./pages/settings";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
@@ -39,6 +40,7 @@ function AppRouter() {
           <Route path="/admin/seasons" component={AdminSeasonsPage} />
           <Route path="/admin/builds" component={AdminBuildsPage} />
           <Route path="/admin/social" component={AdminSocialPage} />
+          <Route path="/admin/reports" component={AdminReportsPage} />
           <Route path="/admin/users" component={AdminUsersPage} />
           <Route path="/admin/categories" component={AdminCategoriesPage} />
           <Route path="/settings" component={SettingsPage} />

@@ -1,17 +1,33 @@
+import { useState } from "react";
 import { useRoute, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useVotes } from "@/hooks/use-votes";
+import { useBookmarks } from "@/hooks/use-bookmarks";
+import { useAuth } from "@/hooks/use-auth";
 import { PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronUp, ChevronDown, ArrowLeft, ExternalLink, Calendar, User, Star } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronUp, ChevronDown, ArrowLeft, ExternalLink, Calendar, User, Star, Bookmark, Flag, LogIn } from "lucide-react";
 import type { BuildWithSubmitter } from "@shared/schema";
 
 export default function BuildDetailPage() {
   const [, params] = useRoute("/build/:id");
   const buildId = params?.id ? parseInt(params.id) : 0;
+  const { isLoggedIn } = useAuth();
+  const { toast } = useToast();
+
+  // Report dialog state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("inappropriate");
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportSent, setReportSent] = useState(false);
 
   const { data: build, isLoading } = useQuery<BuildWithSubmitter>({
     queryKey: ["/api/builds", buildId],
@@ -20,7 +36,25 @@ export default function BuildDetailPage() {
   });
 
   const { getVoteState, castVote, isPending } = useVotes([["/api/builds", buildId]]);
+  const { isBookmarked, toggleBookmark } = useBookmarks([["/api/builds", buildId]]);
   const voteState = build ? getVoteState(build.id) : null;
+  const bookmarked = build ? isBookmarked(build.id) : false;
+
+  const reportMutation = useMutation({
+    mutationFn: async () => {
+      const fullReason = reportDetail ? `${reportReason}: ${reportDetail}` : reportReason;
+      await apiRequest("POST", `/api/builds/${buildId}/report`, { reason: fullReason });
+    },
+    onSuccess: () => {
+      setReportSent(true);
+      setReportOpen(false);
+      toast({ title: "Build reported", description: "Thank you for flagging this build." });
+      queryClient.invalidateQueries({ queryKey: ["/api/builds", buildId] });
+    },
+    onError: () => {
+      toast({ title: "Failed to report", variant: "destructive" });
+    },
+  });
 
   if (isLoading) {
     return <div className="max-w-2xl mx-auto space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-72" /></div>;
@@ -40,6 +74,7 @@ export default function BuildDetailPage() {
   const source = SOURCE_CONFIG[build.sourceType] || SOURCE_CONFIG.other;
   const skills: string[] = (() => { try { return JSON.parse(build.mainSkills); } catch { return []; } })();
   const score = build.upvotes - build.downvotes;
+  const thumbnailUrl = (build as any).thumbnailUrl as string | null | undefined;
 
   // Parse rich content
   const pros: string[] = (() => { try { return JSON.parse((build as any).pros || "[]"); } catch { return []; } })();
@@ -81,6 +116,19 @@ export default function BuildDetailPage() {
         )}
         <span className="text-foreground truncate max-w-[200px]">{build.name}</span>
       </div>
+
+      {/* Thumbnail hero */}
+      {thumbnailUrl && (
+        <div className="rounded-lg overflow-hidden border border-border">
+          <img
+            src={thumbnailUrl}
+            alt={build.name}
+            className="w-full h-48 object-cover"
+            data-testid="img-build-hero"
+            onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+          />
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-lg p-6 space-y-5">
         {/* Header row: title + vote */}
@@ -161,7 +209,7 @@ export default function BuildDetailPage() {
         {/* Engagement text highlight */}
         {engagementText && (
           <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-3" data-testid="text-engagement-quote">
-            <p className="text-sm text-primary italic leading-relaxed">" {engagementText} "</p>
+            <p className="text-sm text-primary italic leading-relaxed">" {engagementText} "</p>
           </div>
         )}
 
@@ -272,7 +320,100 @@ export default function BuildDetailPage() {
             {new Date(build.createdAt).toLocaleDateString()}
           </div>
         </div>
+
+        {/* Save + Report actions */}
+        {isLoggedIn ? (
+          <div className="flex gap-3 pt-1 border-t border-border">
+            <Button
+              variant={bookmarked ? "default" : "outline"}
+              size="sm"
+              onClick={() => toggleBookmark(build.id)}
+              className="flex-1 gap-2"
+              data-testid="button-save-build"
+            >
+              <Bookmark className={`w-4 h-4 ${bookmarked ? "fill-current" : ""}`} />
+              {bookmarked ? "Saved" : "Save Build"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReportOpen(true)}
+              disabled={reportSent}
+              className={`flex-1 gap-2 ${reportSent ? "text-red-400 border-red-400/50" : "hover:text-red-400 hover:border-red-400/50"}`}
+              data-testid="button-report-build"
+            >
+              <Flag className="w-4 h-4" />
+              {reportSent ? "Reported" : "Report"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-border">
+            <LogIn className="w-3.5 h-3.5 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">
+              <span
+                className="text-primary cursor-pointer hover:underline"
+                data-testid="link-signin-to-save"
+                onClick={() => {
+                  // Dispatch a click on the sign-in button in the header
+                  const btn = document.querySelector('[data-testid="button-login"]') as HTMLElement;
+                  btn?.click();
+                }}
+              >
+                Sign in
+              </span>
+              {" "}to save & report builds
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Report Dialog */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Report Build</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger data-testid="select-report-reason">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inappropriate">Inappropriate content</SelectItem>
+                  <SelectItem value="spam">Spam or self-promotion</SelectItem>
+                  <SelectItem value="wrong-game">Wrong game</SelectItem>
+                  <SelectItem value="outdated">Outdated / no longer valid</SelectItem>
+                  <SelectItem value="duplicate">Duplicate build</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Additional details <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                placeholder="Describe the issue..."
+                value={reportDetail}
+                onChange={e => setReportDetail(e.target.value)}
+                rows={3}
+                data-testid="input-report-detail"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => reportMutation.mutate()}
+              disabled={reportMutation.isPending}
+              data-testid="button-submit-report"
+            >
+              {reportMutation.isPending ? "Reporting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

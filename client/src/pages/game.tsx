@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { TIER_CONFIG } from "@/lib/constants";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import BuildCard from "@/components/build-card";
-import { Plus, ArrowLeft, Flame, Zap } from "lucide-react";
+import { Plus, ArrowLeft, Flame, Zap, Shuffle } from "lucide-react";
 import type { GameWithMeta, BuildWithSubmitter, GameMode } from "@shared/schema";
 
 type TierBuild = BuildWithSubmitter & { score: number; ratio: number; tier: string };
@@ -16,12 +16,22 @@ type TierListResponse = Record<string, TierBuild[]>;
 
 export default function GamePage() {
   const [, params] = useRoute("/game/:slug");
+  const [, navigate] = useLocation();
   const gameSlug = params?.slug ?? "";
 
   const [seasonId, setSeasonId] = useState<string>("all");
   const [gameModeId, setGameModeId] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"tier-list" | "trending" | "viral">("tier-list");
+
+  // Fetch all games for switcher
+  const { data: allGames } = useQuery<GameWithMeta[]>({
+    queryKey: ["/api/games"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/games");
+      return res.json();
+    },
+  });
 
   // Fetch game info
   const { data: game, isLoading: gameLoading } = useQuery<GameWithMeta>({
@@ -96,12 +106,35 @@ export default function GamePage() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Link href="/">
-        <Button variant="ghost" size="sm" data-testid="button-back-games">
-          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> All Games
-        </Button>
-      </Link>
+      {/* Breadcrumb + Game switcher */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Link href="/">
+          <Button variant="ghost" size="sm" data-testid="button-back-games">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> All Games
+          </Button>
+        </Link>
+        {allGames && allGames.length > 1 && (
+          <Select
+            value={gameSlug}
+            onValueChange={slug => { if (slug !== gameSlug) navigate(`/game/${slug}`); }}
+          >
+            <SelectTrigger className="w-auto h-8 text-xs bg-card border-border gap-1.5" data-testid="select-game-switcher">
+              <Shuffle className="w-3 h-3" />
+              <SelectValue placeholder="Switch Game" />
+            </SelectTrigger>
+            <SelectContent>
+              {allGames.map(g => (
+                <SelectItem key={g.id} value={g.slug} data-testid={`option-game-${g.slug}`}>
+                  <span className="flex items-center gap-1.5">
+                    <span>{g.icon}</span>
+                    <span>{g.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       {/* Game header */}
       <div

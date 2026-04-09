@@ -14,6 +14,7 @@ export interface ExtractedBuild {
   engagementText: string;
   difficulty: "beginner" | "intermediate" | "advanced" | "expert";
   budgetLevel: "budget" | "mid-range" | "expensive" | "endgame";
+  thumbnailUrl: string;
 }
 
 // ─── Static LE class/mastery lookup (for URL extraction heuristics) ─
@@ -228,6 +229,15 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
   let pageDescription = "";
   let ogTitle = "";
   let ogDescription = "";
+  let thumbnailUrl = "";
+
+  // For YouTube, pre-compute thumbnail from video ID
+  if (sourceType === "youtube") {
+    const videoId = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+    if (videoId) {
+      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
+  }
 
   try {
     const controller = new AbortController();
@@ -261,6 +271,13 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
       const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i)
         || html.match(/<meta[^>]*content="([^"]+)"[^>]*name="description"/i);
       if (descMatch) pageDescription = descMatch[1].trim();
+
+      // Extract og:image (only if not already got YouTube thumbnail)
+      if (!thumbnailUrl) {
+        const ogImgMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i)
+          || html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i);
+        if (ogImgMatch) thumbnailUrl = ogImgMatch[1].trim();
+      }
     }
   } catch {
     // Fetch failed — we'll work with URL-only data
@@ -365,5 +382,6 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
     engagementText,
     difficulty,
     budgetLevel,
+    thumbnailUrl,
   };
 }

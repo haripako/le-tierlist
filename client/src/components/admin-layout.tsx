@@ -1,7 +1,10 @@
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2, Tag } from "lucide-react";
+import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2, Tag, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Dashboard", icon: Shield },
@@ -11,6 +14,7 @@ const ADMIN_NAV = [
   { href: "/admin/classes", label: "Classes", icon: Swords },
   { href: "/admin/seasons", label: "Seasons", icon: Star },
   { href: "/admin/builds", label: "Builds", icon: BookOpen },
+  { href: "/admin/reports", label: "Reports", icon: Flag },
   { href: "/admin/social", label: "Social Queue", icon: Share2 },
   { href: "/admin/users", label: "Users", icon: Users },
 ];
@@ -22,7 +26,18 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [location] = useLocation();
-  const { isAdmin, isLoggedIn } = useAuth();
+  const { isAdmin, isLoggedIn, user } = useAuth();
+
+  const { data: reports } = useQuery<any[]>({
+    queryKey: ["/api/admin/reports", user?.id],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/reports?adminUserId=${user?.id}`);
+      return res.json();
+    },
+    enabled: !!user?.isAdmin,
+    staleTime: 30_000,
+  });
+  const reportCount = reports?.length ?? 0;
 
   if (!isLoggedIn || !isAdmin) {
     return (
@@ -46,6 +61,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           </p>
           {ADMIN_NAV.map(({ href, label, icon: Icon }) => {
             const isActive = location === href || (href !== "/admin" && location.startsWith(href));
+            const isReports = href === "/admin/reports";
             return (
               <Link key={href} href={href}>
                 <div
@@ -58,7 +74,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                   data-testid={`admin-nav-${label.toLowerCase().replace(/ /g, "-")}`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  {label}
+                  <span className="flex-1">{label}</span>
+                  {isReports && reportCount > 0 && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 min-w-[16px]">
+                      {reportCount}
+                    </Badge>
+                  )}
                 </div>
               </Link>
             );

@@ -27,6 +27,7 @@ type ExtractedBuild = {
   engagementText?: string;
   difficulty?: "beginner" | "intermediate" | "advanced" | "expert";
   budgetLevel?: "budget" | "mid-range" | "expensive" | "endgame";
+  thumbnailUrl?: string;
 };
 
 export default function SubmitBuildPage() {
@@ -67,6 +68,7 @@ export default function SubmitBuildPage() {
   const [budgetLevel, setBudgetLevel] = useState("");
   const [prosText, setProsText] = useState(""); // comma-separated
   const [consText, setConsText] = useState(""); // comma-separated
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
 
   // Fetch all games for game picker
   const { data: games } = useQuery<GameWithMeta[]>({
@@ -133,6 +135,7 @@ export default function SubmitBuildPage() {
       if (data.budgetLevel) setBudgetLevel(data.budgetLevel);
       if (data.pros?.length) setProsText(data.pros.join(", "));
       if (data.cons?.length) setConsText(data.cons.join(", "));
+      if (data.thumbnailUrl) setThumbnailUrl(data.thumbnailUrl);
       setExtractConfidence(data.confidence);
       setStep("edit");
     } catch {
@@ -165,6 +168,7 @@ export default function SubmitBuildPage() {
         budgetLevel: budgetLevel || null,
         pros: prosArray.length > 0 ? JSON.stringify(prosArray) : null,
         cons: consArray.length > 0 ? JSON.stringify(consArray) : null,
+        thumbnailUrl: thumbnailUrl || null,
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed"); }
       return res.json();
@@ -322,6 +326,28 @@ export default function SubmitBuildPage() {
             <ExternalLink className="w-3 h-3 shrink-0" />
             <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="truncate hover:text-primary">{guideUrl}</a>
           </div>
+
+          {/* Thumbnail preview */}
+          {thumbnailUrl && (
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card" data-testid="thumbnail-preview">
+              <img
+                src={thumbnailUrl}
+                alt="Thumbnail"
+                className="w-20 h-14 rounded object-cover border border-border shrink-0"
+                onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Thumbnail extracted from URL</p>
+              </div>
+              <button
+                onClick={() => setThumbnailUrl("")}
+                className="text-muted-foreground hover:text-foreground text-xs shrink-0"
+                data-testid="button-remove-thumbnail"
+              >
+                Remove
+              </button>
+            </div>
+          )}
 
           {/* Build Name */}
           <div className="space-y-2">

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ChevronUp, ChevronDown, ExternalLink, Star, Bookmark, Flag } from "lucide-react";
 import { useVotes } from "@/hooks/use-votes";
 import { useBookmarks } from "@/hooks/use-bookmarks";
+import { useAuth } from "@/hooks/use-auth";
 import { PLAYSTYLES, TIER_CONFIG, SOURCE_CONFIG, getKarmaColor } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
@@ -20,6 +21,7 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
   const keys = invalidateKey ? [invalidateKey] : undefined;
   const { getVoteState, castVote, isPending } = useVotes(keys);
   const { isBookmarked, toggleBookmark } = useBookmarks(keys);
+  const { isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [reportSent, setReportSent] = useState(false);
 
@@ -35,6 +37,7 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
   const score = build.upvotes - build.downvotes;
   const bookmarkCount = build.bookmarkCount ?? 0;
   const socialScore = build.socialScore ?? 0;
+  const thumbnailUrl = (build as any).thumbnailUrl as string | null | undefined;
 
   // Parse rich content fields
   const engagementText: string = (build as any).engagementText || "";
@@ -55,6 +58,10 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
   };
 
   const handleReport = async () => {
+    if (!isLoggedIn) {
+      toast({ title: "Sign in to report builds", variant: "destructive" });
+      return;
+    }
     if (reportSent) return;
     try {
       await apiRequest("POST", `/api/builds/${build.id}/report`, { reason: "inappropriate" });
@@ -135,11 +142,23 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
                 {build.name}
               </h3>
             </Link>
-            {build.mastery && (
-              <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" style={{ borderColor: `${build.gameColor}60`, color: build.gameColor }}>
-                {build.mastery}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {build.mastery && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={{ borderColor: `${build.gameColor}60`, color: build.gameColor }}>
+                  {build.mastery}
+                </Badge>
+              )}
+              {/* Thumbnail */}
+              {thumbnailUrl && (
+                <img
+                  src={thumbnailUrl}
+                  alt=""
+                  className="w-12 h-12 rounded object-cover border border-border shrink-0"
+                  data-testid={`img-thumbnail-${build.id}`}
+                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
+            </div>
           </div>
 
           {/* Class name if no mastery */}
@@ -214,7 +233,7 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
               )}
             </div>
 
-            {/* Bookmark + Report + Social score */}
+            {/* Bookmark + Report (logged in only) + Social score */}
             <div className="flex items-center gap-1.5 shrink-0">
               {socialScore > 0 && (
                 <span className="text-[10px] text-muted-foreground flex items-center gap-0.5" data-testid={`text-social-score-${build.id}`}>
@@ -226,30 +245,34 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
                   {bookmarkCount}
                 </span>
               )}
-              <button
-                onClick={() => toggleBookmark(build.id)}
-                className={`p-1 rounded transition-colors ${
-                  bookmarked
-                    ? "text-yellow-400 hover:text-yellow-300"
-                    : "text-muted-foreground hover:text-yellow-400"
-                }`}
-                data-testid={`button-bookmark-${build.id}`}
-                title={bookmarked ? "Remove bookmark" : "Bookmark"}
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-yellow-400" : ""}`} />
-              </button>
-              <button
-                onClick={handleReport}
-                className={`p-1 rounded transition-colors ${
-                  reportSent
-                    ? "text-red-400"
-                    : "text-muted-foreground hover:text-red-400"
-                }`}
-                data-testid={`button-report-${build.id}`}
-                title="Report build"
-              >
-                <Flag className="w-3 h-3" />
-              </button>
+              {isLoggedIn && (
+                <>
+                  <button
+                    onClick={() => toggleBookmark(build.id)}
+                    className={`p-1 rounded transition-colors ${
+                      bookmarked
+                        ? "text-yellow-400 hover:text-yellow-300"
+                        : "text-muted-foreground hover:text-yellow-400"
+                    }`}
+                    data-testid={`button-bookmark-${build.id}`}
+                    title={bookmarked ? "Remove bookmark" : "Bookmark"}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-yellow-400" : ""}`} />
+                  </button>
+                  <button
+                    onClick={handleReport}
+                    className={`p-1 rounded transition-colors ${
+                      reportSent
+                        ? "text-red-400"
+                        : "text-muted-foreground hover:text-red-400"
+                    }`}
+                    data-testid={`button-report-${build.id}`}
+                    title="Report build"
+                  >
+                    <Flag className="w-3 h-3" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

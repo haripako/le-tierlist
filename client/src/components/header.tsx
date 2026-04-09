@@ -52,23 +52,48 @@ export default function Header() {
   const [authOpen, setAuthOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleAuth = async (mode: "login" | "register") => {
+  const passwordsMatch = !confirmPassword || password === confirmPassword;
+  const canRegister = username && password && confirmPassword && password === confirmPassword;
+
+  const handleLogin = async () => {
     setLoading(true);
     try {
-      if (mode === "login") await login(username, password);
-      else await register(username, password);
+      await login(username, password);
       setAuthOpen(false);
       setUsername("");
       setPassword("");
-      toast({ title: mode === "login" ? "Welcome back" : "Account created" });
+      setConfirmPassword("");
+      toast({ title: "Welcome back" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
+
+  const handleRegister = async () => {
+    if (!canRegister) return;
+    setLoading(true);
+    try {
+      await register(username, password);
+      setAuthOpen(false);
+      setUsername("");
+      setPassword("");
+      setConfirmPassword("");
+      toast({ title: "Account created" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Build submit URL: append game slug when on a game page
+  const gameMatch = location.match(/^\/game\/([^?/]+)/);
+  const submitUrl = gameMatch ? `/submit?game=${gameMatch[1]}` : "/submit";
 
   return (
     <>
@@ -102,7 +127,7 @@ export default function Header() {
               </Button>
             </Link>
 
-            <Link href="/submit">
+            <Link href={submitUrl}>
               <Button variant={location === "/submit" ? "default" : "outline"} size="sm" data-testid="link-submit">
                 <Plus className="w-3.5 h-3.5 sm:mr-1.5" />
                 <span className="hidden sm:inline">Submit Build</span>
@@ -163,7 +188,10 @@ export default function Header() {
       </header>
 
       {/* Auth Dialog */}
-      <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+      <Dialog open={authOpen} onOpenChange={open => {
+        setAuthOpen(open);
+        if (!open) { setUsername(""); setPassword(""); setConfirmPassword(""); }
+      }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>Join the Community</DialogTitle>
@@ -180,9 +208,9 @@ export default function Header() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-pass">Password</Label>
-                <Input id="login-pass" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" onKeyDown={e => { if (e.key === "Enter") handleAuth("login"); }} data-testid="input-login-password" />
+                <Input id="login-pass" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" onKeyDown={e => { if (e.key === "Enter") handleLogin(); }} data-testid="input-login-password" />
               </div>
-              <Button className="w-full" onClick={() => handleAuth("login")} disabled={loading} data-testid="button-do-login">
+              <Button className="w-full" onClick={handleLogin} disabled={loading} data-testid="button-do-login">
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </TabsContent>
@@ -195,7 +223,28 @@ export default function Header() {
                 <Label htmlFor="reg-pass">Password</Label>
                 <Input id="reg-pass" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Choose a password" data-testid="input-register-password" />
               </div>
-              <Button className="w-full" onClick={() => handleAuth("register")} disabled={loading} data-testid="button-do-register">
+              <div className="space-y-2">
+                <Label htmlFor="reg-confirm">Confirm Password</Label>
+                <Input
+                  id="reg-confirm"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  onKeyDown={e => { if (e.key === "Enter" && canRegister) handleRegister(); }}
+                  className={!passwordsMatch ? "border-red-400 focus-visible:ring-red-400" : ""}
+                  data-testid="input-register-confirm-password"
+                />
+                {!passwordsMatch && (
+                  <p className="text-xs text-red-400" data-testid="text-password-mismatch">Passwords don't match</p>
+                )}
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleRegister}
+                disabled={loading || !canRegister}
+                data-testid="button-do-register"
+              >
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
             </TabsContent>

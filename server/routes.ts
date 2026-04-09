@@ -197,6 +197,7 @@ function initDB() {
   try { db.run(sql`ALTER TABLE builds ADD COLUMN engagement_text TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN difficulty TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN budget_level TEXT`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN thumbnail_url TEXT`); } catch {}
 
   // Seed categories if empty
   const catCount = db.all(sql`SELECT count(*) as c FROM categories`);
@@ -2943,6 +2944,26 @@ export async function registerRoutes(server: Server, app: Express) {
     const admin = storage.getUserById(parseInt(adminUserId as string));
     if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
     res.json(storage.getReports());
+  });
+
+  app.delete("/api/admin/reports/:id", (req, res) => {
+    const reportId = parseInt(req.params.id);
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    storage.deleteReport(reportId);
+    res.json({ success: true });
+  });
+
+  app.delete("/api/admin/builds/:id", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const build = storage.getBuild(buildId);
+    if (!build) return res.status(404).json({ error: "Build not found" });
+    storage.deleteBuild(buildId);
+    res.json({ success: true });
   });
 
   // ── Categories ──

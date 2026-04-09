@@ -106,6 +106,7 @@ export const builds = sqliteTable("builds", {
   engagementText: text("engagement_text"),
   difficulty: text("difficulty"), // beginner | intermediate | advanced | expert
   budgetLevel: text("budget_level"), // budget | mid-range | expensive | endgame
+  thumbnailUrl: text("thumbnail_url"),  // extracted og:image or YouTube thumbnail
   createdAt: text("created_at").notNull(),
 });
 
@@ -198,6 +199,7 @@ export const insertBuildSchema = createInsertSchema(builds).omit({
   engagementText: z.string().nullable().default(null),
   difficulty: z.string().nullable().default(null),
   budgetLevel: z.string().nullable().default(null),
+  thumbnailUrl: z.string().nullable().default(null),
 });
 
 export const insertVoteSchema = createInsertSchema(votes).omit({
