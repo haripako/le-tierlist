@@ -123,30 +123,20 @@ export default function SubmitBuildPage() {
         description,
         mainSkills: JSON.stringify(skillsArray),
         guideUrl,
-        submitterId: user!.id,
+        submitterId: user?.id || null,
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed"); }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tier-list"] });
-      toast({ title: "Build submitted", description: "Your build has been added. Earn karma as people vote on it." });
+      toast({ title: "Build submitted", description: isLoggedIn ? "Your build has been added. Earn karma as people vote on it." : "Your build has been added to the tier list." });
       navigate("/");
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
-
-  if (!isLoggedIn) {
-    return (
-      <div className="max-w-2xl mx-auto text-center py-16 space-y-4">
-        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
-        <h2 className="text-lg font-semibold">Sign in to submit builds</h2>
-        <p className="text-sm text-muted-foreground">You need an account to submit builds and earn karma from community votes.</p>
-      </div>
-    );
-  }
 
   const isValid = name && className && mastery && seasonId && gameMode && playstyle && guideUrl;
 

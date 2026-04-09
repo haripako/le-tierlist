@@ -239,12 +239,21 @@ export async function registerRoutes(server: Server, app: Express) {
   });
 
   app.post("/api/builds", (req, res) => {
-    const parsed = insertBuildSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues });
+    // Allow anonymous submissions: if no submitterId, use the Anonymous user
+    let submitterId = req.body.submitterId;
+    if (!submitterId) {
+      let anon = storage.getUserByUsername("Anonymous");
+      if (!anon) {
+        anon = storage.createUser({ username: "Anonymous", passwordHash: "nologin" });
+      }
+      submitterId = anon.id;
+    } else {
+      const user = storage.getUserById(submitterId);
+      if (!user) return res.status(400).json({ error: "Invalid submitter" });
+    }
 
-    // Verify submitter exists
-    const user = storage.getUserById(parsed.data.submitterId);
-    if (!user) return res.status(400).json({ error: "Invalid submitter" });
+    const parsed = insertBuildSchema.safeParse({ ...req.body, submitterId });
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues });
 
     // Verify season exists
     const season = storage.getSeason(parsed.data.seasonId);

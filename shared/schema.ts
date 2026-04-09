@@ -94,6 +94,7 @@ export const insertBuildSchema = createInsertSchema(builds).omit({
 }).extend({
   description: z.string().default(""),
   mainSkills: z.string().default("[]"),
+  submitterId: z.number().nullable().default(null),
 });
 
 export const insertVoteSchema = createInsertSchema(votes).omit({

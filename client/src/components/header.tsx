@@ -64,15 +64,15 @@ export default function Header() {
               </Button>
             </Link>
 
+            <Link href="/submit">
+              <Button variant={location === "/submit" ? "default" : "outline"} size="sm" data-testid="link-submit">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Submit
+              </Button>
+            </Link>
+
             {isLoggedIn ? (
               <>
-                <Link href="/submit">
-                  <Button variant={location === "/submit" ? "default" : "outline"} size="sm" data-testid="link-submit">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Submit
-                  </Button>
-                </Link>
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="gap-1.5" data-testid="button-user-menu">
