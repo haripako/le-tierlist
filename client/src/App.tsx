@@ -4,10 +4,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import HomePage from "./pages/home";
+import GamePage from "./pages/game";
 import SubmitBuildPage from "./pages/submit-build";
 import BuildDetailPage from "./pages/build-detail";
 import UserProfilePage from "./pages/user-profile";
 import AdminSeasonsPage from "./pages/admin-seasons";
+import AdminGamesPage from "./pages/admin-games";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
 
@@ -18,10 +20,12 @@ function AppRouter() {
       <main className="max-w-[1200px] mx-auto px-4 py-6">
         <Switch>
           <Route path="/" component={HomePage} />
+          <Route path="/game/:slug" component={GamePage} />
           <Route path="/submit" component={SubmitBuildPage} />
           <Route path="/build/:id" component={BuildDetailPage} />
           <Route path="/user/:id" component={UserProfilePage} />
           <Route path="/admin/seasons" component={AdminSeasonsPage} />
+          <Route path="/admin/games" component={AdminGamesPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

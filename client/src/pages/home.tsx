@@ -1,164 +1,150 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { CLASSES, GAME_MODES, TIER_CONFIG } from "@/lib/constants";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getCategoryLabel } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import BuildCard from "@/components/build-card";
-import type { BuildWithSubmitter, Season } from "@shared/schema";
+import { Layers, ChevronRight, Trophy } from "lucide-react";
+import type { GameWithMeta } from "@shared/schema";
 
-type TierBuild = BuildWithSubmitter & { score: number; ratio: number; tier: string };
-type TierListResponse = Record<string, TierBuild[]>;
+const CATEGORY_ORDER = ["arpg", "looter-shooter", "mmo", "other"];
 
 export default function HomePage() {
-  const [gameMode, setGameMode] = useState("softcore");
-  const [classFilter, setClassFilter] = useState("all");
-
-  // Fetch seasons from API
-  const { data: seasons } = useQuery<Season[]>({
-    queryKey: ["/api/seasons"],
+  const { data: gamesRaw, isLoading } = useQuery<GameWithMeta[]>({
+    queryKey: ["/api/games"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/seasons");
+      const res = await apiRequest("GET", "/api/games");
       return res.json();
     },
   });
 
-  const activeSeasons = seasons?.filter(s => s.isActive) ?? [];
-  const [seasonId, setSeasonId] = useState<number | null>(null);
-  const currentSeasonId = seasonId ?? activeSeasons[0]?.id;
+  const games = gamesRaw ?? [];
 
-  const { data: tierList, isLoading } = useQuery<TierListResponse>({
-    queryKey: ["/api/tier-list", currentSeasonId, gameMode],
-    queryFn: async () => {
-      const params = new URLSearchParams({ gameMode });
-      if (currentSeasonId) params.set("seasonId", String(currentSeasonId));
-      const res = await apiRequest("GET", `/api/tier-list?${params}`);
-      return res.json();
-    },
-    enabled: !!currentSeasonId,
-  });
+  // Featured game: Last Epoch
+  const featured = games.find(g => g.slug === "last-epoch");
 
-  const filteredTierList = tierList
-    ? Object.fromEntries(
-        Object.entries(tierList).map(([tier, builds]) => [
-          tier,
-          classFilter === "all" ? builds : builds.filter(b => b.className === classFilter),
-        ])
-      )
-    : null;
-
-  const currentSeason = activeSeasons.find(s => s.id === currentSeasonId);
-  const currentMode = GAME_MODES.find(m => m.id === gameMode);
+  // Group by category
+  const grouped: Record<string, GameWithMeta[]> = {};
+  for (const g of games) {
+    if (!grouped[g.category]) grouped[g.category] = [];
+    grouped[g.category].push(g);
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
+      {/* Hero */}
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }} data-testid="text-page-title">
-          Community Tier List
+          Build Tier Lists for Every ARPG
         </h1>
         <p className="text-sm text-muted-foreground">
-          Builds ranked by community votes. {currentSeason?.name} {currentMode?.icon} {currentMode?.name}
+          Community-ranked builds for Last Epoch, Diablo, Path of Exile, and more. Vote, share, discover.
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3" data-testid="filters-section">
-        <Select
-          value={currentSeasonId ? String(currentSeasonId) : ""}
-          onValueChange={v => setSeasonId(parseInt(v))}
-        >
-          <SelectTrigger className="w-[240px] bg-card border-border" data-testid="select-season">
-            <SelectValue placeholder="Season" />
-          </SelectTrigger>
-          <SelectContent>
-            {activeSeasons.map(s => (
-              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          {GAME_MODES.map(mode => (
-            <button
-              key={mode.id}
-              onClick={() => setGameMode(mode.id)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                gameMode === mode.id ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid={`button-mode-${mode.id}`}
-            >
-              {mode.icon} {mode.name}
-            </button>
-          ))}
+      {isLoading ? (
+        <div className="space-y-8">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
+          </div>
         </div>
-
-        <Select value={classFilter} onValueChange={setClassFilter}>
-          <SelectTrigger className="w-[180px] bg-card border-border" data-testid="select-class">
-            <SelectValue placeholder="All Classes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Classes</SelectItem>
-            {CLASSES.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Tier List */}
-      {isLoading || !currentSeasonId ? (
-        <div className="space-y-6">
-          {["S", "A", "B", "C", "D"].map(tier => (
-            <div key={tier} className="space-y-3">
-              <Skeleton className="h-8 w-32" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                <Skeleton className="h-32" />
-                <Skeleton className="h-32" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filteredTierList ? (
-        <div className="space-y-6">
-          {(["S", "A", "B", "C", "D"] as const).map(tier => {
-            const builds = (filteredTierList[tier] || []) as TierBuild[];
-            const config = TIER_CONFIG[tier];
-            if (builds.length === 0) return null;
-
-            return (
-              <div key={tier} className="space-y-3" data-testid={`tier-section-${tier}`}>
-                <div className="flex items-center gap-3">
+      ) : (
+        <>
+          {/* Featured */}
+          {featured && (
+            <Link href={`/game/${featured.slug}`}>
+              <div
+                className="relative rounded-xl border border-border overflow-hidden cursor-pointer group transition-all hover:border-opacity-70 hover:shadow-lg"
+                style={{ background: `linear-gradient(135deg, ${featured.color}18 0%, transparent 60%)` }}
+                data-testid={`card-featured-game`}
+              >
+                <div
+                  className="absolute top-0 right-0 w-48 h-full opacity-10 rounded-xl"
+                  style={{ background: `radial-gradient(circle, ${featured.color} 0%, transparent 70%)` }}
+                />
+                <div className="relative p-6 flex items-center gap-5">
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg text-white ${config.bgAccent}`}
-                    style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}
+                    className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl shrink-0 shadow-lg"
+                    style={{ background: `${featured.color}22`, border: `1px solid ${featured.color}44` }}
                   >
-                    {config.label}
+                    {featured.icon}
                   </div>
-                  <div>
-                    <span className={`text-sm font-semibold ${config.textColor}`}>{config.description}</span>
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {builds.length} build{builds.length !== 1 ? "s" : ""}
-                    </Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Trophy className="w-3.5 h-3.5" style={{ color: featured.color }} />
+                      <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: featured.color }}>
+                        Featured
+                      </span>
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+                      {featured.name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {featured.buildCount} builds · {featured.classes.length} classes · {featured.activeSeasons.length} active seasons
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                    <span className="text-sm font-medium hidden sm:block">View Tier List</span>
+                    <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {builds.map(build => (
-                    <BuildCard key={build.id} build={build} tier={tier} seasonId={currentSeasonId!} gameMode={gameMode} />
+              </div>
+            </Link>
+          )}
+
+          {/* Games by category */}
+          {CATEGORY_ORDER.map(cat => {
+            const catGames = grouped[cat];
+            if (!catGames || catGames.length === 0) return null;
+            return (
+              <section key={cat} className="space-y-4" data-testid={`section-category-${cat}`}>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    {getCategoryLabel(cat)}
+                  </h2>
+                  <Badge variant="secondary" className="text-[10px]">{catGames.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {catGames.map(game => (
+                    <Link key={game.id} href={`/game/${game.slug}`}>
+                      <div
+                        className="relative rounded-lg border border-border bg-card cursor-pointer group transition-all hover:shadow-md overflow-hidden"
+                        style={{ borderLeftColor: game.color, borderLeftWidth: 3 }}
+                        data-testid={`card-game-${game.slug}`}
+                      >
+                        <div
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: `linear-gradient(135deg, ${game.color}08 0%, transparent 50%)` }}
+                        />
+                        <div className="relative p-4 flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                            style={{ background: `${game.color}18` }}
+                          >
+                            {game.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-game-name-${game.slug}`}>
+                              {game.name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {game.buildCount > 0 ? `${game.buildCount} builds` : "No builds yet"}
+                              {game.classes.length > 0 && ` · ${game.classes.length} classes`}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
-              </div>
+              </section>
             );
           })}
-
-          {Object.values(filteredTierList).every(arr => arr.length === 0) && (
-            <div className="text-center py-16 text-muted-foreground" data-testid="text-empty-state">
-              <p className="text-lg font-medium">No builds found</p>
-              <p className="text-sm mt-1">Try a different season, game mode, or class filter.</p>
-            </div>
-          )}
-        </div>
-      ) : null}
+        </>
+      )}
     </div>
   );
 }

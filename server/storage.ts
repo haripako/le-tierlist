@@ -1,14 +1,16 @@
 import {
-  users, seasons, builds, votes,
-  type User, type InsertUser,
+  games, gameClasses, seasons, users, builds, votes, anonVotes,
+  type Game, type InsertGame,
+  type GameClass, type InsertGameClass,
   type Season, type InsertSeason,
+  type User, type InsertUser,
   type Build, type InsertBuild,
   type Vote, type InsertVote,
   type BuildWithSubmitter,
   BUILD_SOURCES,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, asc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -34,6 +36,31 @@ export function detectSource(url: string): string {
 // ─── Storage interface ─────────────────────────────────────────
 
 export interface IStorage {
+  // Games
+  getGames(): Game[];
+  getGame(id: number): Game | undefined;
+  getGameBySlug(slug: string): Game | undefined;
+  createGame(game: InsertGame): Game;
+  updateGame(id: number, data: Partial<InsertGame>): Game | undefined;
+  deleteGame(id: number): void;
+
+  // Game classes
+  getGameClasses(gameId: number): GameClass[];
+  getGameClass(id: number): GameClass | undefined;
+  createGameClass(cls: InsertGameClass): GameClass;
+  updateGameClass(id: number, data: Partial<InsertGameClass>): GameClass | undefined;
+  deleteGameClass(id: number): void;
+
+  // Seasons
+  getSeasons(): Season[];
+  getSeasonsByGame(gameId: number): Season[];
+  getActiveSeason(gameId?: number): Season | undefined;
+  getSeason(id: number): Season | undefined;
+  getSeasonBySlug(slug: string): Season | undefined;
+  createSeason(season: InsertSeason): Season;
+  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined;
+  deleteSeason(id: number): void;
+
   // Users
   createUser(user: InsertUser): User;
   getUserByUsername(username: string): User | undefined;
@@ -41,17 +68,8 @@ export interface IStorage {
   updateKarma(userId: number, delta: number): void;
   getTopUsers(limit?: number): User[];
 
-  // Seasons
-  getSeasons(): Season[];
-  getActiveSeason(): Season | undefined;
-  getSeason(id: number): Season | undefined;
-  getSeasonBySlug(slug: string): Season | undefined;
-  createSeason(season: InsertSeason): Season;
-  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined;
-  deleteSeason(id: number): void;
-
   // Builds
-  getBuilds(filters?: { seasonId?: number; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[];
+  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[];
   getBuild(id: number): BuildWithSubmitter | undefined;
   createBuild(build: InsertBuild): Build;
   getUserBuilds(userId: number): BuildWithSubmitter[];
@@ -66,6 +84,106 @@ export interface IStorage {
 // ─── Database storage ──────────────────────────────────────────
 
 export class DatabaseStorage implements IStorage {
+
+  // ── Games ──
+
+  getGames(): Game[] {
+    return db.select().from(games)
+      .where(eq(games.isActive, true))
+      .orderBy(desc(games.sortOrder))
+      .all();
+  }
+
+  getGame(id: number): Game | undefined {
+    return db.select().from(games).where(eq(games.id, id)).get();
+  }
+
+  getGameBySlug(slug: string): Game | undefined {
+    return db.select().from(games).where(eq(games.slug, slug)).get();
+  }
+
+  createGame(game: InsertGame): Game {
+    return db.insert(games).values({ ...game, createdAt: new Date().toISOString() }).returning().get();
+  }
+
+  updateGame(id: number, data: Partial<InsertGame>): Game | undefined {
+    db.update(games).set(data).where(eq(games.id, id)).run();
+    return this.getGame(id);
+  }
+
+  deleteGame(id: number): void {
+    db.update(games).set({ isActive: false }).where(eq(games.id, id)).run();
+  }
+
+  // ── Game classes ──
+
+  getGameClasses(gameId: number): GameClass[] {
+    return db.select().from(gameClasses).where(eq(gameClasses.gameId, gameId)).all();
+  }
+
+  getGameClass(id: number): GameClass | undefined {
+    return db.select().from(gameClasses).where(eq(gameClasses.id, id)).get();
+  }
+
+  createGameClass(cls: InsertGameClass): GameClass {
+    return db.insert(gameClasses).values(cls).returning().get();
+  }
+
+  updateGameClass(id: number, data: Partial<InsertGameClass>): GameClass | undefined {
+    db.update(gameClasses).set(data).where(eq(gameClasses.id, id)).run();
+    return this.getGameClass(id);
+  }
+
+  deleteGameClass(id: number): void {
+    db.delete(gameClasses).where(eq(gameClasses.id, id)).run();
+  }
+
+  // ── Seasons ──
+
+  getSeasons(): Season[] {
+    return db.select().from(seasons).orderBy(desc(seasons.sortOrder)).all();
+  }
+
+  getSeasonsByGame(gameId: number): Season[] {
+    return db.select().from(seasons)
+      .where(eq(seasons.gameId, gameId))
+      .orderBy(desc(seasons.sortOrder))
+      .all();
+  }
+
+  getActiveSeason(gameId?: number): Season | undefined {
+    if (gameId !== undefined) {
+      return db.select().from(seasons)
+        .where(and(eq(seasons.gameId, gameId), eq(seasons.isActive, true)))
+        .orderBy(desc(seasons.sortOrder))
+        .get();
+    }
+    return db.select().from(seasons)
+      .where(eq(seasons.isActive, true))
+      .orderBy(desc(seasons.sortOrder))
+      .get();
+  }
+
+  getSeason(id: number): Season | undefined {
+    return db.select().from(seasons).where(eq(seasons.id, id)).get();
+  }
+
+  getSeasonBySlug(slug: string): Season | undefined {
+    return db.select().from(seasons).where(eq(seasons.slug, slug)).get();
+  }
+
+  createSeason(season: InsertSeason): Season {
+    return db.insert(seasons).values({ ...season, createdAt: new Date().toISOString() }).returning().get();
+  }
+
+  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined {
+    db.update(seasons).set(data).where(eq(seasons.id, id)).run();
+    return this.getSeason(id);
+  }
+
+  deleteSeason(id: number): void {
+    db.delete(seasons).where(eq(seasons.id, id)).run();
+  }
 
   // ── Users ──
 
@@ -96,60 +214,29 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).orderBy(desc(users.karma)).limit(limit).all();
   }
 
-  // ── Seasons ──
-
-  getSeasons(): Season[] {
-    return db.select().from(seasons).orderBy(desc(seasons.sortOrder)).all();
-  }
-
-  getActiveSeason(): Season | undefined {
-    return db.select().from(seasons)
-      .where(eq(seasons.isActive, true))
-      .orderBy(desc(seasons.sortOrder))
-      .get();
-  }
-
-  getSeason(id: number): Season | undefined {
-    return db.select().from(seasons).where(eq(seasons.id, id)).get();
-  }
-
-  getSeasonBySlug(slug: string): Season | undefined {
-    return db.select().from(seasons).where(eq(seasons.slug, slug)).get();
-  }
-
-  createSeason(season: InsertSeason): Season {
-    return db.insert(seasons).values({
-      ...season,
-      createdAt: new Date().toISOString(),
-    }).returning().get();
-  }
-
-  updateSeason(id: number, data: Partial<InsertSeason>): Season | undefined {
-    db.update(seasons).set(data).where(eq(seasons.id, id)).run();
-    return this.getSeason(id);
-  }
-
-  deleteSeason(id: number): void {
-    db.delete(seasons).where(eq(seasons.id, id)).run();
-  }
-
   // ── Builds ──
 
   private enrichBuild(build: Build): BuildWithSubmitter {
-    const submitter = this.getUserById(build.submitterId);
-    const season = this.getSeason(build.seasonId);
+    const submitter = build.submitterId ? this.getUserById(build.submitterId) : undefined;
+    const season = build.seasonId ? this.getSeason(build.seasonId) : undefined;
+    const game = this.getGame(build.gameId);
     return {
       ...build,
-      submitterName: submitter?.username ?? "Unknown",
+      submitterName: submitter?.username ?? "Anonymous",
       submitterKarma: submitter?.karma ?? 0,
-      seasonSlug: season?.slug ?? "",
-      seasonName: season?.name ?? "",
+      seasonSlug: season?.slug ?? null,
+      seasonName: season?.name ?? null,
+      gameName: game?.name ?? "Unknown",
+      gameSlug: game?.slug ?? "",
+      gameIcon: game?.icon ?? "⚔️",
+      gameColor: game?.color ?? "#d4a537",
     };
   }
 
-  getBuilds(filters?: { seasonId?: number; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[] {
-    const conditions = [];
-    if (filters?.seasonId) conditions.push(eq(builds.seasonId, filters.seasonId));
+  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[] {
+    const conditions: any[] = [];
+    if (filters?.gameId !== undefined) conditions.push(eq(builds.gameId, filters.gameId));
+    if (filters?.seasonId !== undefined && filters.seasonId !== null) conditions.push(eq(builds.seasonId, filters.seasonId));
     if (filters?.gameMode) conditions.push(eq(builds.gameMode, filters.gameMode));
     if (filters?.className) conditions.push(eq(builds.className, filters.className));
     if (filters?.mastery) conditions.push(eq(builds.mastery, filters.mastery));
@@ -178,8 +265,9 @@ export class DatabaseStorage implements IStorage {
       createdAt: new Date().toISOString(),
     }).returning().get();
 
-    // Increment submitter's build count
-    db.run(sql`UPDATE users SET build_submissions = build_submissions + 1 WHERE id = ${build.submitterId}`);
+    if (build.submitterId) {
+      db.run(sql`UPDATE users SET build_submissions = build_submissions + 1 WHERE id = ${build.submitterId}`);
+    }
 
     return created;
   }
@@ -206,36 +294,27 @@ export class DatabaseStorage implements IStorage {
     if (!build) throw new Error("Build not found");
 
     if (existing) {
-      // Remove old vote effect
-      const oldDelta = existing.voteType === "up" ? -1 : 1;
       if (existing.voteType === "up") {
         db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
       } else {
         db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
       }
-      // Reverse karma on submitter
-      this.updateKarma(build.submitterId, oldDelta);
+      const oldDelta = existing.voteType === "up" ? -1 : 1;
+      if (build.submitterId) this.updateKarma(build.submitterId, oldDelta);
 
-      db.delete(votes)
-        .where(and(eq(votes.buildId, buildId), eq(votes.userId, userId)))
-        .run();
+      db.delete(votes).where(and(eq(votes.buildId, buildId), eq(votes.userId, userId))).run();
     }
 
-    // Insert new vote
     const newVote = db.insert(votes).values({
-      buildId,
-      userId,
-      voteType,
-      createdAt: new Date().toISOString(),
+      buildId, userId, voteType, createdAt: new Date().toISOString(),
     }).returning().get();
 
-    // Apply new vote effect
     if (voteType === "up") {
       db.run(sql`UPDATE builds SET upvotes = upvotes + 1 WHERE id = ${buildId}`);
-      this.updateKarma(build.submitterId, 1);
+      if (build.submitterId) this.updateKarma(build.submitterId, 1);
     } else {
       db.run(sql`UPDATE builds SET downvotes = downvotes + 1 WHERE id = ${buildId}`);
-      this.updateKarma(build.submitterId, -1);
+      if (build.submitterId) this.updateKarma(build.submitterId, -1);
     }
 
     return newVote;
@@ -250,14 +329,12 @@ export class DatabaseStorage implements IStorage {
 
     if (existing.voteType === "up") {
       db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
-      this.updateKarma(build.submitterId, -1);
+      if (build.submitterId) this.updateKarma(build.submitterId, -1);
     } else {
       db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
-      this.updateKarma(build.submitterId, 1);
+      if (build.submitterId) this.updateKarma(build.submitterId, 1);
     }
-    db.delete(votes)
-      .where(and(eq(votes.buildId, buildId), eq(votes.userId, userId)))
-      .run();
+    db.delete(votes).where(and(eq(votes.buildId, buildId), eq(votes.userId, userId))).run();
   }
 
   getUserVotes(userId: number): Vote[] {

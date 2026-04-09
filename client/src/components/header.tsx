@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Plus, Trophy, LogIn, LogOut, User, Shield, Star } from "lucide-react";
+import { Plus, Home, LogIn, LogOut, User, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -40,17 +40,18 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
         <div className="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
+          {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group" data-testid="link-home">
               <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-primary" />
+                <span className="text-primary font-bold text-sm" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>BT</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-bold tracking-tight text-foreground group-hover:text-primary transition-colors" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-                  LE TIER LIST
+                  BuildTier
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-none -mt-0.5">
-                  Community Rankings
+                  ARPG Build Rankings
                 </span>
               </div>
             </div>
@@ -58,59 +59,64 @@ export default function Header() {
 
           <nav className="flex items-center gap-2">
             <Link href="/">
-              <Button variant={location === "/" ? "secondary" : "ghost"} size="sm" data-testid="link-tier-list">
-                <Trophy className="w-3.5 h-3.5 mr-1.5" />
-                Tier List
+              <Button variant={location === "/" ? "secondary" : "ghost"} size="sm" data-testid="link-games">
+                <Home className="w-3.5 h-3.5 mr-1.5" />
+                Games
               </Button>
             </Link>
 
             <Link href="/submit">
               <Button variant={location === "/submit" ? "default" : "outline"} size="sm" data-testid="link-submit">
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Submit
+                Submit Build
               </Button>
             </Link>
 
             {isLoggedIn ? (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1.5" data-testid="button-user-menu">
-                      <User className="w-3.5 h-3.5" />
-                      <span className="max-w-[80px] truncate">{user!.username}</span>
-                      <span className={`text-xs font-semibold ${getKarmaColor(user!.karma)}`}>
-                        {user!.karma}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <div className="px-2 py-1.5">
-                      <p className="text-sm font-medium">{user!.username}</p>
-                      <p className={`text-xs ${getKarmaColor(user!.karma)}`}>
-                        <Star className="w-3 h-3 inline mr-0.5" />
-                        {user!.karma} karma · {getKarmaTitle(user!.karma)}
-                      </p>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <Link href={`/user/${user!.id}`}>
-                      <DropdownMenuItem data-testid="link-profile">
-                        <User className="w-3.5 h-3.5 mr-2" /> Profile
-                      </DropdownMenuItem>
-                    </Link>
-                    {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5" data-testid="button-user-menu">
+                    <User className="w-3.5 h-3.5" />
+                    <span className="max-w-[80px] truncate">{user!.username}</span>
+                    <span className={`text-xs font-semibold ${getKarmaColor(user!.karma)}`}>
+                      {user!.karma}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user!.username}</p>
+                    <p className={`text-xs ${getKarmaColor(user!.karma)}`}>
+                      <Star className="w-3 h-3 inline mr-0.5" />
+                      {user!.karma} karma · {getKarmaTitle(user!.karma)}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <Link href={`/user/${user!.id}`}>
+                    <DropdownMenuItem data-testid="link-profile">
+                      <User className="w-3.5 h-3.5 mr-2" /> Profile
+                    </DropdownMenuItem>
+                  </Link>
+                  {isAdmin && (
+                    <>
+                      <Link href="/admin/games">
+                        <DropdownMenuItem data-testid="link-admin-games">
+                          <Shield className="w-3.5 h-3.5 mr-2" /> Manage Games
+                        </DropdownMenuItem>
+                      </Link>
                       <Link href="/admin/seasons">
                         <DropdownMenuItem data-testid="link-admin-seasons">
                           <Shield className="w-3.5 h-3.5 mr-2" /> Manage Seasons
                         </DropdownMenuItem>
                       </Link>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} data-testid="button-logout">
-                      <LogOut className="w-3.5 h-3.5 mr-2" /> Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} data-testid="button-logout">
+                    <LogOut className="w-3.5 h-3.5 mr-2" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Button variant="outline" size="sm" onClick={() => setAuthOpen(true)} data-testid="button-login">
                 <LogIn className="w-3.5 h-3.5 mr-1.5" />
@@ -139,7 +145,7 @@ export default function Header() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-pass">Password</Label>
-                <Input id="login-pass" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" data-testid="input-login-password" />
+                <Input id="login-pass" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" onKeyDown={e => { if (e.key === "Enter") handleAuth("login"); }} data-testid="input-login-password" />
               </div>
               <Button className="w-full" onClick={() => handleAuth("login")} disabled={loading} data-testid="button-do-login">
                 {loading ? "Signing in..." : "Sign In"}

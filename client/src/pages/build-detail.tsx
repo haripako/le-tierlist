@@ -1,22 +1,17 @@
 import { useRoute, Link } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/use-auth";
-import { useVoter } from "@/hooks/use-voter";
-import { useToast } from "@/hooks/use-toast";
-import { CLASSES, GAME_MODES, PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useVotes } from "@/hooks/use-votes";
+import { GAME_MODES, PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThumbsUp, ThumbsDown, ArrowLeft, ExternalLink, Calendar, User, Swords, Star } from "lucide-react";
+import { ChevronUp, ChevronDown, ArrowLeft, ExternalLink, Calendar, User, Star } from "lucide-react";
 import type { BuildWithSubmitter } from "@shared/schema";
 
 export default function BuildDetailPage() {
   const [, params] = useRoute("/build/:id");
   const buildId = params?.id ? parseInt(params.id) : 0;
-  const { user, isLoggedIn } = useAuth();
-  const { voterHash } = useVoter();
-  const { toast } = useToast();
 
   const { data: build, isLoading } = useQuery<BuildWithSubmitter>({
     queryKey: ["/api/builds", buildId],
@@ -24,21 +19,8 @@ export default function BuildDetailPage() {
     enabled: buildId > 0,
   });
 
-  const voteMutation = useMutation({
-    mutationFn: async (voteType: "up" | "down") => {
-      if (isLoggedIn) {
-        const res = await apiRequest("POST", `/api/builds/${buildId}/vote`, { userId: user!.id, voteType });
-        return res.json();
-      } else {
-        const res = await apiRequest("POST", `/api/builds/${buildId}/anon-vote`, { voteType });
-        return res.json();
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/builds", buildId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tier-list"] });
-    },
-  });
+  const { getVoteState, castVote, isPending } = useVotes([["/api/builds", buildId]]);
+  const voteState = build ? getVoteState(build.id) : null;
 
   if (isLoading) {
     return <div className="max-w-2xl mx-auto space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-72" /></div>;
@@ -53,7 +35,6 @@ export default function BuildDetailPage() {
     );
   }
 
-  const classInfo = CLASSES.find(c => c.id === build.className);
   const mode = GAME_MODES.find(m => m.id === build.gameMode);
   const playstyle = PLAYSTYLES.find(p => p.id === build.playstyle);
   const source = SOURCE_CONFIG[build.sourceType] || SOURCE_CONFIG.other;
@@ -62,89 +43,158 @@ export default function BuildDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/">
-        <Button variant="ghost" size="sm" data-testid="button-back">
-          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Back to Tier List
-        </Button>
-      </Link>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+        <Link href="/">
+          <button className="hover:text-foreground transition-colors" data-testid="link-games">All Games</button>
+        </Link>
+        <span>/</span>
+        {build.gameSlug && (
+          <>
+            <Link href={`/game/${build.gameSlug}`}>
+              <button className="hover:text-foreground transition-colors flex items-center gap-1">
+                {build.gameIcon} {build.gameName}
+              </button>
+            </Link>
+            <span>/</span>
+          </>
+        )}
+        <span className="text-foreground truncate max-w-[200px]">{build.name}</span>
+      </div>
 
       <div className="bg-card border border-border rounded-lg p-6 space-y-5">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
+        {/* Header row: title + vote */}
+        <div className="flex items-start gap-4">
+          <div className="flex-1 min-w-0 space-y-2">
             <h1 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }} data-testid="text-build-name">
               {build.name}
             </h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="text-xs" style={{ borderColor: classInfo?.color, color: classInfo?.color }}>{classInfo?.name}</Badge>
-              <Badge variant="outline" className="text-xs">{build.mastery}</Badge>
-              <Badge variant="secondary" className="text-xs">{mode?.icon} {mode?.name}</Badge>
-              <Badge variant="secondary" className="text-xs">{playstyle?.icon} {playstyle?.name}</Badge>
+              <Badge variant="outline" className="text-xs" style={{ borderColor: `${build.gameColor}60`, color: build.gameColor }}>
+                {build.gameIcon} {build.gameName}
+              </Badge>
+              {build.className && (
+                <Badge variant="outline" className="text-xs">{build.className}</Badge>
+              )}
+              {build.mastery && (
+                <Badge variant="outline" className="text-xs">{build.mastery}</Badge>
+              )}
+              {mode && <Badge variant="secondary" className="text-xs">{mode.icon} {mode.name}</Badge>}
+              {playstyle && <Badge variant="secondary" className="text-xs">{playstyle.icon} {playstyle.name}</Badge>}
+              {build.seasonName && (
+                <Badge variant="secondary" className="text-xs">🗓 {build.seasonName}</Badge>
+              )}
             </div>
           </div>
 
-          {/* Voting */}
-          <div className="flex flex-col items-center gap-2 min-w-[80px]">
-            <Button variant="outline" size="sm" onClick={() => voteMutation.mutate("up")} disabled={voteMutation.isPending}
-              className="w-full hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30" data-testid="button-upvote">
-              <ThumbsUp className="w-4 h-4 mr-1.5" />{build.upvotes}
-            </Button>
-            <span className={`text-lg font-bold ${score > 0 ? "text-green-400" : score < 0 ? "text-red-400" : "text-muted-foreground"}`} data-testid="text-score">
+          {/* Reddit-style vote column */}
+          <div className="flex flex-col items-center gap-1 shrink-0 min-w-[52px]">
+            <button
+              onClick={() => castVote(build.id, "up")}
+              disabled={isPending}
+              className={`p-2 rounded-lg transition-colors ${
+                voteState === "up"
+                  ? "text-primary bg-primary/15"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+              }`}
+              data-testid="button-upvote"
+            >
+              <ChevronUp className="w-5 h-5" />
+            </button>
+            <span
+              className={`text-lg font-bold tabular-nums ${score > 0 ? "text-primary" : score < 0 ? "text-red-400" : "text-muted-foreground"}`}
+              data-testid="text-score"
+            >
               {score > 0 ? "+" : ""}{score}
             </span>
-            <Button variant="outline" size="sm" onClick={() => voteMutation.mutate("down")} disabled={voteMutation.isPending}
-              className="w-full hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30" data-testid="button-downvote">
-              <ThumbsDown className="w-4 h-4 mr-1.5" />{build.downvotes}
-            </Button>
+            <button
+              onClick={() => castVote(build.id, "down")}
+              disabled={isPending}
+              className={`p-2 rounded-lg transition-colors ${
+                voteState === "down"
+                  ? "text-blue-400 bg-blue-500/15"
+                  : "text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10"
+              }`}
+              data-testid="button-downvote"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* Source link — prominent */}
+        {/* Guide link */}
         <a
           href={build.guideUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-secondary/50 hover:bg-secondary transition-colors`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-sm ${source.color} hover:bg-secondary transition-colors`}
           data-testid="link-guide"
         >
-          <span className="text-lg">{source.icon}</span>
+          <span className="text-base">{source.icon}</span>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium ${source.color}`}>View on {source.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{build.guideUrl}</p>
+            <span className="font-medium">{source.name}</span>
+            <p className="text-[11px] text-muted-foreground truncate">{build.guideUrl}</p>
           </div>
-          <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+          <ExternalLink className="w-4 h-4 shrink-0" />
         </a>
 
         {/* Description */}
-        <div className="pt-2">
-          <p className="text-sm text-foreground leading-relaxed" data-testid="text-description">{build.description}</p>
-        </div>
-
-        {/* Skills */}
-        <div className="pt-3 border-t border-border">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Main Skills</h3>
-          <div className="flex flex-wrap gap-2">
-            {skills.map(skill => (
-              <Badge key={skill} variant="secondary" className="text-xs"><Swords className="w-3 h-3 mr-1" />{skill}</Badge>
-            ))}
+        {build.description && (
+          <div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{build.description}</p>
           </div>
+        )}
+
+        {/* Main Skills */}
+        {skills.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Main Skills</p>
+            <div className="flex flex-wrap gap-2">
+              {skills.map(skill => (
+                <span key={skill} className="px-3 py-1 rounded-lg bg-secondary text-sm text-foreground">{skill}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Votes breakdown */}
+        <div className="flex items-center gap-4 py-3 border-t border-border">
+          <div className="flex items-center gap-1.5 text-sm">
+            <ChevronUp className="w-4 h-4 text-primary" />
+            <span className="font-medium text-primary">{build.upvotes}</span>
+            <span className="text-muted-foreground">upvotes</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            <ChevronDown className="w-4 h-4 text-red-400" />
+            <span className="font-medium text-red-400">{build.downvotes}</span>
+            <span className="text-muted-foreground">downvotes</span>
+          </div>
+          {build.upvotes + build.downvotes > 0 && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              {Math.round(build.upvotes / (build.upvotes + build.downvotes) * 100)}% upvoted
+            </span>
+          )}
         </div>
 
-        {/* Submitter + Meta */}
-        <div className="pt-3 border-t border-border">
-          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {/* Submitter */}
+        <div className="flex items-center gap-3 py-3 border-t border-border">
+          <User className="w-4 h-4 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-2 text-sm min-w-0">
+            <span className="text-muted-foreground">Submitted by</span>
             <Link href={`/user/${build.submitterId}`}>
-              <span className="flex items-center gap-1 hover:text-primary cursor-pointer transition-colors">
-                <User className="w-3 h-3" />
+              <span className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
                 {build.submitterName}
-                <span className={`flex items-center gap-0.5 ${getKarmaColor(build.submitterKarma)}`}>
-                  <Star className="w-3 h-3" />{build.submitterKarma} · {getKarmaTitle(build.submitterKarma)}
-                </span>
               </span>
             </Link>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />{build.seasonName}
-            </span>
+            {build.submitterKarma > 0 && (
+              <span className={`flex items-center gap-0.5 text-xs ${getKarmaColor(build.submitterKarma)}`}>
+                <Star className="w-3 h-3" />{build.submitterKarma} · {getKarmaTitle(build.submitterKarma)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto">
+            <Calendar className="w-3 h-3" />
+            {new Date(build.createdAt).toLocaleDateString()}
           </div>
         </div>
       </div>

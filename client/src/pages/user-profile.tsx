@@ -1,11 +1,11 @@
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { getKarmaColor, getKarmaTitle, SOURCE_CONFIG, CLASSES, PLAYSTYLES } from "@/lib/constants";
+import { getKarmaColor, getKarmaTitle, SOURCE_CONFIG, PLAYSTYLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Star, Trophy, ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, Star, ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import type { BuildWithSubmitter } from "@shared/schema";
 
 type UserProfile = {
@@ -75,11 +75,15 @@ export default function UserProfilePage() {
             <p className="text-xs text-muted-foreground">Builds Submitted</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-green-400">+{totalScore}</p>
+            <p className={`text-lg font-bold ${totalScore >= 0 ? "text-primary" : "text-red-400"}`}>
+              {totalScore > 0 ? "+" : ""}{totalScore}
+            </p>
             <p className="text-xs text-muted-foreground">Total Score</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-foreground">{new Date(profile.createdAt).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</p>
+            <p className="text-lg font-bold text-foreground">
+              {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+            </p>
             <p className="text-xs text-muted-foreground">Member Since</p>
           </div>
         </div>
@@ -95,32 +99,54 @@ export default function UserProfilePage() {
         ) : (
           <div className="space-y-2">
             {profile.builds.map(build => {
-              const classInfo = CLASSES.find(c => c.id === build.className);
               const source = SOURCE_CONFIG[build.sourceType] || SOURCE_CONFIG.other;
+              const playstyle = PLAYSTYLES.find(p => p.id === build.playstyle);
               const score = build.upvotes - build.downvotes;
+
               return (
-                <div key={build.id} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3">
-                  <div className="flex flex-col items-center min-w-[48px]">
-                    <span className={`text-sm font-bold ${score > 0 ? "text-green-400" : score < 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                      {score > 0 ? "+" : ""}{score}
+                <div key={build.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card" data-testid={`row-build-${build.id}`}>
+                  {/* Vote score */}
+                  <div className="flex flex-col items-center text-xs shrink-0 w-8">
+                    <ChevronUp className={`w-3 h-3 ${score > 0 ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`font-bold tabular-nums ${score > 0 ? "text-primary" : score < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                      {score}
                     </span>
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <ThumbsUp className="w-2.5 h-2.5" />{build.upvotes}
-                      <ThumbsDown className="w-2.5 h-2.5 ml-1" />{build.downvotes}
-                    </div>
+                    <ChevronDown className={`w-3 h-3 ${score < 0 ? "text-red-400" : "text-muted-foreground"}`} />
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <Link href={`/build/${build.id}`}>
-                      <p className="text-sm font-medium text-foreground hover:text-primary cursor-pointer truncate">{build.name}</p>
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={{ borderColor: classInfo?.color, color: classInfo?.color }}>{build.mastery}</Badge>
-                      <span className={`text-[10px] ${source.color}`}>{source.icon} {source.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{build.seasonName}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Link href={`/build/${build.id}`}>
+                        <span className="text-sm font-medium text-foreground hover:text-primary cursor-pointer transition-colors truncate" data-testid={`text-build-name-${build.id}`}>
+                          {build.name}
+                        </span>
+                      </Link>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
+                      {/* Game */}
+                      {build.gameIcon && (
+                        <Link href={`/game/${build.gameSlug}`}>
+                          <span className="hover:text-primary cursor-pointer flex items-center gap-0.5">
+                            {build.gameIcon} {build.gameName}
+                          </span>
+                        </Link>
+                      )}
+                      {build.className && <span>{build.className}</span>}
+                      {build.mastery && <span>· {build.mastery}</span>}
+                      {playstyle && <span>· {playstyle.icon} {playstyle.name}</span>}
+                      {build.seasonName && <span>· {build.seasonName}</span>}
                     </div>
                   </div>
-                  <a href={build.guideUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary shrink-0">
-                    <ExternalLink className="w-4 h-4" />
+
+                  <a
+                    href={build.guideUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-1 text-[11px] ${source.color} hover:underline shrink-0`}
+                    data-testid={`link-source-${build.id}`}
+                  >
+                    {source.icon}
+                    <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </div>
               );

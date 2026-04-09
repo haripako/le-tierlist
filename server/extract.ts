@@ -1,5 +1,3 @@
-import { CLASSES } from "@shared/schema";
-
 // ─── Types ──────────────────────────────────────────────────────
 
 export interface ExtractedBuild {
@@ -13,17 +11,25 @@ export interface ExtractedBuild {
   confidence: "high" | "medium" | "low";
 }
 
-// ─── Class/Mastery lookup ───────────────────────────────────────
+// ─── Static LE class/mastery lookup (for URL extraction heuristics) ─
+// These are only used by the extract heuristic — the actual classes come from the DB.
+const LE_CLASSES = [
+  { id: "sentinel", name: "Sentinel", masteries: ["Void Knight", "Forge Guard", "Paladin"] },
+  { id: "mage", name: "Mage", masteries: ["Sorcerer", "Spellblade", "Runemaster"] },
+  { id: "primalist", name: "Primalist", masteries: ["Beastmaster", "Shaman", "Druid"] },
+  { id: "rogue", name: "Rogue", masteries: ["Bladedancer", "Marksman", "Falconer"] },
+  { id: "acolyte", name: "Acolyte", masteries: ["Necromancer", "Lich", "Warlock"] },
+] as const;
 
 const MASTERY_TO_CLASS: Record<string, string> = {};
 const ALL_MASTERIES: string[] = [];
-for (const cls of CLASSES) {
+for (const cls of LE_CLASSES) {
   for (const m of cls.masteries) {
     MASTERY_TO_CLASS[m.toLowerCase()] = cls.id;
     ALL_MASTERIES.push(m);
   }
 }
-const CLASS_NAMES = CLASSES.map(c => c.name.toLowerCase());
+const CLASS_NAMES = LE_CLASSES.map(c => c.name.toLowerCase());
 
 // Common LE skill names for matching
 const KNOWN_SKILLS = [

@@ -1,16 +1,11 @@
-export const CLASSES = [
-  { id: "sentinel", name: "Sentinel", color: "#d4a537", masteries: ["Void Knight", "Forge Guard", "Paladin"] },
-  { id: "mage", name: "Mage", color: "#5b8dd9", masteries: ["Sorcerer", "Spellblade", "Runemaster"] },
-  { id: "primalist", name: "Primalist", color: "#4dab6d", masteries: ["Beastmaster", "Shaman", "Druid"] },
-  { id: "rogue", name: "Rogue", color: "#9b59b6", masteries: ["Bladedancer", "Marksman", "Falconer"] },
-  { id: "acolyte", name: "Acolyte", color: "#c0392b", masteries: ["Necromancer", "Lich", "Warlock"] },
-] as const;
-
+// Game modes — apply to any game
 export const GAME_MODES = [
   { id: "softcore", name: "Softcore", icon: "⚔️" },
   { id: "hardcore", name: "Hardcore", icon: "💀" },
+  { id: "default", name: "Default", icon: "🎮" },
 ] as const;
 
+// Playstyles — universal across games
 export const PLAYSTYLES = [
   { id: "melee", name: "Melee", icon: "🗡️" },
   { id: "ranged", name: "Ranged", icon: "🏹" },
@@ -19,6 +14,15 @@ export const PLAYSTYLES = [
   { id: "hybrid", name: "Hybrid", icon: "⚡" },
 ] as const;
 
+// Game categories for display
+export const GAME_CATEGORIES = [
+  { id: "arpg", name: "ARPG" },
+  { id: "looter-shooter", name: "Looter-Shooter" },
+  { id: "mmo", name: "MMO" },
+  { id: "other", name: "Other" },
+] as const;
+
+// Source config for build guide links
 export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: string }> = {
   lastepochtools: { name: "LE Tools", icon: "🔧", color: "text-yellow-400" },
   maxroll: { name: "Maxroll", icon: "📊", color: "text-blue-400" },
@@ -29,6 +33,7 @@ export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: 
   other: { name: "Link", icon: "🔗", color: "text-muted-foreground" },
 };
 
+// Tier config — drives both build card styling and tier row styling
 export const TIER_CONFIG = {
   S: { label: "S", color: "bg-tier-s/20 border-tier-s/40 text-tier-s", bgAccent: "bg-tier-s", textColor: "text-tier-s", description: "Meta-defining" },
   A: { label: "A", color: "bg-tier-a/20 border-tier-a/40 text-tier-a", bgAccent: "bg-tier-a", textColor: "text-tier-a", description: "Excellent" },
@@ -37,6 +42,7 @@ export const TIER_CONFIG = {
   D: { label: "D", color: "bg-tier-d/20 border-tier-d/40 text-tier-d", bgAccent: "bg-tier-d", textColor: "text-tier-d", description: "Below Average" },
 } as const;
 
+// Karma color helper
 export function getKarmaColor(karma: number): string {
   if (karma >= 1000) return "text-tier-s";
   if (karma >= 500) return "text-tier-a";
@@ -52,4 +58,10 @@ export function getKarmaTitle(karma: number): string {
   if (karma >= 50) return "Regular";
   if (karma >= 0) return "Newcomer";
   return "Controversial";
+}
+
+// Category display name helper
+export function getCategoryLabel(category: string): string {
+  const found = GAME_CATEGORIES.find(c => c.id === category);
+  return found?.name ?? category.toUpperCase();
 }
