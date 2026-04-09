@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords } from "lucide-react";
+import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/classes", label: "Classes", icon: Swords },
   { href: "/admin/seasons", label: "Seasons", icon: Star },
   { href: "/admin/builds", label: "Builds", icon: BookOpen },
+  { href: "/admin/social", label: "Social Queue", icon: Share2 },
   { href: "/admin/users", label: "Users", icon: Users },
 ];
 

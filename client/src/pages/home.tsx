@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getCategoryLabel } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Layers, ChevronRight, Trophy } from "lucide-react";
+import { Layers, ChevronRight, Trophy, TrendingUp, Zap } from "lucide-react";
 import type { GameWithMeta } from "@shared/schema";
 
 const CATEGORY_ORDER = ["arpg", "looter-shooter", "mmo", "other"];
@@ -20,6 +20,9 @@ export default function HomePage() {
 
   const games = gamesRaw ?? [];
 
+  // Aggregate stats
+  const totalBuilds = games.reduce((sum, g) => sum + g.buildCount, 0);
+
   // Featured game: Last Epoch
   const featured = games.find(g => g.slug === "last-epoch");
 
@@ -32,14 +35,89 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10">
-      {/* Hero */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }} data-testid="text-page-title">
-          Build Tier Lists for Every ARPG
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Community-ranked builds for Last Epoch, Diablo, Path of Exile, and more. Vote, share, discover.
-        </p>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card px-6 py-8 sm:px-10 sm:py-10">
+        {/* Ambient background glow */}
+        <div
+          className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none"
+          style={{ background: "radial-gradient(circle, hsl(38 90% 50%) 0%, transparent 70%)" }}
+        />
+        <div
+          className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full opacity-5 blur-2xl pointer-events-none"
+          style={{ background: "radial-gradient(circle, hsl(38 90% 60%) 0%, transparent 70%)" }}
+        />
+
+        <div className="relative">
+          {/* Pill badge */}
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 mb-4">
+            <Zap className="w-3 h-3 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+              Community Powered
+            </span>
+          </div>
+
+          {/* Headline with gradient text */}
+          <h1
+            className="text-xl sm:text-2xl font-bold tracking-tight mb-2 leading-tight"
+            style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}
+            data-testid="text-page-title"
+          >
+            <span
+              style={{
+                background: "linear-gradient(135deg, hsl(38 90% 55%) 0%, hsl(30 85% 50%) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Build Tier Lists
+            </span>
+            {" "}
+            <span className="text-foreground">for Every ARPG</span>
+          </h1>
+
+          <p className="text-sm text-muted-foreground max-w-lg mb-5">
+            Community-ranked builds for Last Epoch, Diablo, Path of Exile, and more.
+            Vote, share, and discover what's truly meta.
+          </p>
+
+          {/* Stats row */}
+          {!isLoading && (
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Trophy className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground leading-none">{totalBuilds.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">total builds</p>
+                </div>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground leading-none">{games.length}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">games tracked</p>
+                </div>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Layers className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground leading-none">
+                    {games.reduce((sum, g) => sum + g.classes.length, 0)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">classes</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -55,7 +133,7 @@ export default function HomePage() {
           {featured && (
             <Link href={`/game/${featured.slug}`}>
               <div
-                className="relative rounded-xl border border-border overflow-hidden cursor-pointer group transition-all hover:border-opacity-70 hover:shadow-lg"
+                className="relative rounded-xl border border-border overflow-hidden cursor-pointer group transition-all hover:border-opacity-70 hover:shadow-lg hover:shadow-black/20"
                 style={{ background: `linear-gradient(135deg, ${featured.color}18 0%, transparent 60%)` }}
                 data-testid={`card-featured-game`}
               >
@@ -63,9 +141,13 @@ export default function HomePage() {
                   className="absolute top-0 right-0 w-48 h-full opacity-10 rounded-xl"
                   style={{ background: `radial-gradient(circle, ${featured.color} 0%, transparent 70%)` }}
                 />
+                {/* Subtle animated shine on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background: `linear-gradient(105deg, transparent 40%, ${featured.color}08 50%, transparent 60%)` }}
+                />
                 <div className="relative p-6 flex items-center gap-5">
                   <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl shrink-0 shadow-lg"
+                    className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl shrink-0 shadow-lg transition-transform group-hover:scale-105 duration-200"
                     style={{ background: `${featured.color}22`, border: `1px solid ${featured.color}44` }}
                   >
                     {featured.icon}
@@ -110,17 +192,23 @@ export default function HomePage() {
                   {catGames.map(game => (
                     <Link key={game.id} href={`/game/${game.slug}`}>
                       <div
-                        className="relative rounded-lg border border-border bg-card cursor-pointer group transition-all hover:shadow-md overflow-hidden"
+                        className="relative rounded-lg border border-border bg-card cursor-pointer group transition-all hover:shadow-md hover:shadow-black/10 overflow-hidden"
                         style={{ borderLeftColor: game.color, borderLeftWidth: 3 }}
                         data-testid={`card-game-${game.slug}`}
                       >
+                        {/* Hover overlay */}
                         <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ background: `linear-gradient(135deg, ${game.color}08 0%, transparent 50%)` }}
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          style={{ background: `linear-gradient(135deg, ${game.color}0a 0%, transparent 50%)` }}
+                        />
+                        {/* Right glow accent */}
+                        <div
+                          className="absolute top-0 right-0 w-16 h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          style={{ background: `radial-gradient(circle at right, ${game.color}12 0%, transparent 70%)` }}
                         />
                         <div className="relative p-4 flex items-center gap-3">
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-105 duration-200"
                             style={{ background: `${game.color}18` }}
                           >
                             {game.icon}

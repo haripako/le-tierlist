@@ -11,6 +11,40 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getKarmaColor, getKarmaTitle } from "@/lib/constants";
 
+// BuildTier SVG Logo — geometric trophy/tier mark with upvote arrow accent
+function BuildTierLogo({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-label="BuildTier logo"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Base platform / podium */}
+      <rect x="4" y="26" width="24" height="3" rx="1.5" fill="hsl(38 90% 50%)" />
+      {/* Center column */}
+      <rect x="13" y="20" width="6" height="6" rx="0.5" fill="hsl(38 90% 50%)" opacity="0.9" />
+      {/* Trophy cup body */}
+      <path
+        d="M10 8 H22 L20 17 Q16 20 12 17 Z"
+        fill="hsl(38 90% 50%)"
+        opacity="0.95"
+      />
+      {/* Trophy handles */}
+      <path d="M10 8 Q7 8 7 12 Q7 16 10 16" stroke="hsl(38 90% 50%)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M22 8 Q25 8 25 12 Q25 16 22 16" stroke="hsl(38 90% 50%)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      {/* Upvote arrow overlay — centered in trophy */}
+      <path
+        d="M16 10 L13.5 13.5 H15 V16 H17 V13.5 H18.5 Z"
+        fill="hsl(40 10% 8%)"
+        opacity="0.85"
+      />
+    </svg>
+  );
+}
+
 export default function Header() {
   const [location] = useLocation();
   const { user, login, register, logout, isLoggedIn, isAdmin } = useAuth();
@@ -38,16 +72,19 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md backdrop-saturate-150">
         <div className="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group" data-testid="link-home">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <span className="text-primary font-bold text-sm" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>BT</span>
+            <div className="flex items-center gap-2.5 cursor-pointer group" data-testid="link-home">
+              <div className="shrink-0 transition-transform group-hover:scale-105 duration-200">
+                <BuildTierLogo size={32} />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold tracking-tight text-foreground group-hover:text-primary transition-colors" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+                <span
+                  className="text-sm font-bold tracking-tight text-foreground group-hover:text-primary transition-colors"
+                  style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}
+                >
                   BuildTier
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-none -mt-0.5">

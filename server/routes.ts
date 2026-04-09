@@ -5,6 +5,7 @@ import { insertBuildSchema, insertSeasonSchema, insertGameSchema, insertGameClas
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { extractBuildFromUrl } from "./extract";
+import { generateSocialPosts, getTierFromScore } from "./social";
 import crypto from "crypto";
 
 // ─── Voter identity (cookie-based, stable across requests) ─────
@@ -127,6 +128,20 @@ function initDB() {
     created_at TEXT NOT NULL
   )`);
   db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_anon_votes_unique ON anon_votes(build_id, voter_hash)`);
+
+  // Social posts
+  db.run(sql`CREATE TABLE IF NOT EXISTS social_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    game_id INTEGER NOT NULL,
+    platform TEXT NOT NULL,
+    content TEXT NOT NULL,
+    hashtags TEXT NOT NULL,
+    hook_line TEXT NOT NULL,
+    tier_label TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL
+  )`);
 
   // Seed if empty
   const gameCount = db.all(sql`SELECT count(*) as c FROM games`);
@@ -1127,6 +1142,31 @@ export async function registerRoutes(server: Server, app: Express) {
       db.run(sql`UPDATE builds SET anon_hash = ${voterHash} WHERE id = ${build.id}`);
     }
 
+    // Auto-generate social posts for all 4 platforms
+    try {
+      const enrichedBuild = storage.getBuild(build.id);
+      if (enrichedBuild) {
+        const gameName = enrichedBuild.gameName || game.name;
+        const tier = getTierFromScore(enrichedBuild.upvotes, enrichedBuild.downvotes);
+        const socialPostsData = generateSocialPosts(enrichedBuild, gameName, tier);
+        for (const sp of socialPostsData) {
+          storage.createSocialPost({
+            buildId: build.id,
+            gameId: build.gameId,
+            platform: sp.platform,
+            content: sp.content,
+            hashtags: sp.hashtags,
+            hookLine: sp.hookLine,
+            tierLabel: sp.tierLabel,
+            status: "pending",
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to generate social posts:", e);
+    }
+
     res.status(201).json(storage.getBuild(build.id));
   });
 
@@ -1136,6 +1176,138 @@ export async function registerRoutes(server: Server, app: Express) {
     if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
     storage.deleteBuild(parseInt(req.params.id));
     res.json({ ok: true });
+  });
+
+  // ── Admin Social Queue endpoints ──
+  // IMPORTANT: static routes must come before parameterized (:id) routes
+
+  app.get("/api/admin/social-queue", (req, res) => {
+    const { adminUserId, platform, status, gameId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+
+    const filters: { platform?: string; status?: string; gameId?: number } = {};
+    if (platform && platform !== "all") filters.platform = platform as string;
+    if (status && status !== "all") filters.status = status as string;
+    if (gameId) filters.gameId = parseInt(gameId as string);
+
+    const posts = storage.getSocialPosts(filters);
+
+    // Enrich with build info
+    const enriched = posts.map(post => {
+      const build = storage.getBuild(post.buildId);
+      return {
+        ...post,
+        buildName: build?.name ?? "Unknown Build",
+        gameName: build?.gameName ?? "Unknown Game",
+        className: build?.className ?? "",
+        mastery: build?.mastery ?? "",
+        upvotes: build?.upvotes ?? 0,
+        downvotes: build?.downvotes ?? 0,
+      };
+    });
+
+    res.json(enriched);
+  });
+
+  // Static sub-routes BEFORE parameterized routes
+  app.post("/api/admin/social-queue/generate-all", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+
+    const allBuilds = storage.getBuilds();
+    let generated = 0;
+
+    for (const build of allBuilds) {
+      if (!storage.hasSocialPostsForBuild(build.id)) {
+        const tier = getTierFromScore(build.upvotes, build.downvotes);
+        const socialPostsData = generateSocialPosts(build, build.gameName, tier);
+        for (const sp of socialPostsData) {
+          storage.createSocialPost({
+            buildId: build.id,
+            gameId: build.gameId,
+            platform: sp.platform,
+            content: sp.content,
+            hashtags: sp.hashtags,
+            hookLine: sp.hookLine,
+            tierLabel: sp.tierLabel,
+            status: "pending",
+            createdAt: new Date().toISOString(),
+          });
+        }
+        generated += 4;
+      }
+    }
+
+    res.json({ generated, message: `Generated ${generated} social posts` });
+  });
+
+  app.post("/api/admin/social-queue/regenerate/:buildId", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+
+    const buildId = parseInt(req.params.buildId);
+    const build = storage.getBuild(buildId);
+    if (!build) return res.status(404).json({ error: "Build not found" });
+
+    // Delete existing posts for this build
+    storage.deleteSocialPostsForBuild(buildId);
+
+    // Regenerate
+    const tier = getTierFromScore(build.upvotes, build.downvotes);
+    const socialPostsData = generateSocialPosts(build, build.gameName, tier);
+    const created = [];
+    for (const sp of socialPostsData) {
+      const post = storage.createSocialPost({
+        buildId: build.id,
+        gameId: build.gameId,
+        platform: sp.platform,
+        content: sp.content,
+        hashtags: sp.hashtags,
+        hookLine: sp.hookLine,
+        tierLabel: sp.tierLabel,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      });
+      created.push(post);
+    }
+    res.json(created);
+  });
+
+  // Parameterized routes after static routes
+  app.post("/api/admin/social-queue/:id/approve", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateSocialPostStatus(parseInt(req.params.id), "approved");
+    if (!updated) return res.status(404).json({ error: "Post not found" });
+    res.json(updated);
+  });
+
+  app.post("/api/admin/social-queue/:id/posted", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateSocialPostStatus(parseInt(req.params.id), "posted");
+    if (!updated) return res.status(404).json({ error: "Post not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/social-queue/:id", (req, res) => {
+    const { adminUserId } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    storage.deleteSocialPost(parseInt(req.params.id));
+    res.json({ ok: true });
+  });
+
+  app.get("/api/admin/social-stats", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    res.json(storage.getSocialStats());
   });
 
   // ── Admin endpoints ──

@@ -15,6 +15,7 @@ import AdminClassesPage from "./pages/admin-classes";
 import AdminSeasonsPage from "./pages/admin-seasons";
 import AdminBuildsPage from "./pages/admin-builds";
 import AdminUsersPage from "./pages/admin-users";
+import AdminSocialPage from "./pages/admin-social";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
 
@@ -35,6 +36,7 @@ function AppRouter() {
           <Route path="/admin/classes" component={AdminClassesPage} />
           <Route path="/admin/seasons" component={AdminSeasonsPage} />
           <Route path="/admin/builds" component={AdminBuildsPage} />
+          <Route path="/admin/social" component={AdminSocialPage} />
           <Route path="/admin/users" component={AdminUsersPage} />
           <Route component={NotFound} />
         </Switch>

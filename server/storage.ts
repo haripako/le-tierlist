@@ -1,5 +1,5 @@
 import {
-  games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes,
+  games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes, socialPosts,
   type Game, type InsertGame,
   type GameMode, type InsertGameMode,
   type GameClass, type InsertGameClass,
@@ -7,6 +7,7 @@ import {
   type User, type InsertUser,
   type Build, type InsertBuild,
   type Vote, type InsertVote,
+  type SocialPost, type InsertSocialPost,
   type BuildWithSubmitter,
   BUILD_SOURCES,
 } from "@shared/schema";
@@ -90,6 +91,17 @@ export interface IStorage {
   castVote(buildId: number, userId: number, voteType: string): Vote;
   removeVote(buildId: number, userId: number): void;
   getUserVotes(userId: number): Vote[];
+
+  // Social posts
+  createSocialPost(post: InsertSocialPost): SocialPost;
+  getSocialPosts(filters?: { platform?: string; status?: string; gameId?: number }): SocialPost[];
+  getSocialPost(id: number): SocialPost | undefined;
+  updateSocialPostStatus(id: number, status: string): SocialPost | undefined;
+  deleteSocialPost(id: number): void;
+  getSocialPostsForBuild(buildId: number): SocialPost[];
+  deleteSocialPostsForBuild(buildId: number): void;
+  hasSocialPostsForBuild(buildId: number): boolean;
+  getSocialStats(): { pending: number; postedThisWeek: number; byPlatform: Record<string, number> };
 }
 
 // ─── Database storage ──────────────────────────────────────────
@@ -393,6 +405,64 @@ export class DatabaseStorage implements IStorage {
 
   getUserVotes(userId: number): Vote[] {
     return db.select().from(votes).where(eq(votes.userId, userId)).all();
+  }
+
+  // ── Social posts ──
+
+  createSocialPost(post: InsertSocialPost): SocialPost {
+    return db.insert(socialPosts).values(post).returning().get();
+  }
+
+  getSocialPosts(filters?: { platform?: string; status?: string; gameId?: number }): SocialPost[] {
+    const conditions: any[] = [];
+    if (filters?.platform) conditions.push(eq(socialPosts.platform, filters.platform));
+    if (filters?.status) conditions.push(eq(socialPosts.status, filters.status));
+    if (filters?.gameId) conditions.push(eq(socialPosts.gameId, filters.gameId));
+
+    if (conditions.length > 0) {
+      return db.select().from(socialPosts).where(and(...conditions)).orderBy(desc(socialPosts.createdAt)).all();
+    }
+    return db.select().from(socialPosts).orderBy(desc(socialPosts.createdAt)).all();
+  }
+
+  getSocialPost(id: number): SocialPost | undefined {
+    return db.select().from(socialPosts).where(eq(socialPosts.id, id)).get();
+  }
+
+  updateSocialPostStatus(id: number, status: string): SocialPost | undefined {
+    db.run(sql`UPDATE social_posts SET status = ${status} WHERE id = ${id}`);
+    return this.getSocialPost(id);
+  }
+
+  deleteSocialPost(id: number): void {
+    db.delete(socialPosts).where(eq(socialPosts.id, id)).run();
+  }
+
+  getSocialPostsForBuild(buildId: number): SocialPost[] {
+    return db.select().from(socialPosts).where(eq(socialPosts.buildId, buildId)).all();
+  }
+
+  deleteSocialPostsForBuild(buildId: number): void {
+    db.run(sql`DELETE FROM social_posts WHERE build_id = ${buildId}`);
+  }
+
+  hasSocialPostsForBuild(buildId: number): boolean {
+    const row = db.all(sql`SELECT count(*) as c FROM social_posts WHERE build_id = ${buildId}`) as any[];
+    return (row[0]?.c ?? 0) > 0;
+  }
+
+  getSocialStats(): { pending: number; postedThisWeek: number; byPlatform: Record<string, number> } {
+    const pending = (db.all(sql`SELECT count(*) as c FROM social_posts WHERE status = 'pending'`) as any[])[0]?.c ?? 0;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const postedThisWeek = (db.all(sql`SELECT count(*) as c FROM social_posts WHERE status = 'posted' AND created_at >= ${weekAgo}`) as any[])[0]?.c ?? 0;
+
+    const platformRows = db.all(sql`SELECT platform, count(*) as c FROM social_posts GROUP BY platform`) as any[];
+    const byPlatform: Record<string, number> = {};
+    for (const row of platformRows) {
+      byPlatform[row.platform] = row.c;
+    }
+
+    return { pending, postedThisWeek, byPlatform };
   }
 }
 

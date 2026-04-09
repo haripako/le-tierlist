@@ -181,6 +181,27 @@ export type GameWithMeta = Game & {
   modes: GameMode[];
 };
 
+// ─── Social posts table ──────────────────────────────────────
+export const socialPosts = sqliteTable("social_posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  buildId: integer("build_id").notNull(),
+  gameId: integer("game_id").notNull(),
+  platform: text("platform").notNull(), // twitter | instagram | tiktok | youtube_shorts
+  content: text("content").notNull(),
+  hashtags: text("hashtags").notNull(), // comma-separated
+  hookLine: text("hook_line").notNull(),
+  tierLabel: text("tier_label"), // S-tier, A-tier, etc.
+  status: text("status").notNull().default("pending"), // pending | approved | posted | dismissed
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
+  id: true,
+});
+
+export type SocialPost = typeof socialPosts.$inferSelect;
+export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
+
 // ─── Static source config ─────────────────────────────────────
 export const BUILD_SOURCES = [
   { id: "lastepochtools", name: "Last Epoch Tools", domain: "lastepochtools.com", icon: "🔧" },
