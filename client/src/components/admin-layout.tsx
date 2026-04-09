@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2, Tag, Flag } from "lucide-react";
+import { Shield, Gamepad2, Layers, Users, Star, BookOpen, Swords, Share2, Tag, Flag, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -13,6 +13,7 @@ const ADMIN_NAV = [
   { href: "/admin/game-modes", label: "Game Modes", icon: Layers },
   { href: "/admin/classes", label: "Classes", icon: Swords },
   { href: "/admin/seasons", label: "Seasons", icon: Star },
+  { href: "/admin/sources", label: "Build Sources", icon: Database },
   { href: "/admin/builds", label: "Builds", icon: BookOpen },
   { href: "/admin/reports", label: "Reports", icon: Flag },
   { href: "/admin/social", label: "Social Queue", icon: Share2 },

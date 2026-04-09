@@ -126,7 +126,11 @@ export default function GamePage() {
               {allGames.map(g => (
                 <SelectItem key={g.id} value={g.slug} data-testid={`option-game-${g.slug}`}>
                   <span className="flex items-center gap-1.5">
-                    <span>{g.icon}</span>
+                    {(g as any).logoUrl ? (
+                      <img src={(g as any).logoUrl} alt={g.name} className="w-4 h-4 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    ) : (
+                      <span>{g.icon}</span>
+                    )}
                     <span>{g.name}</span>
                   </span>
                 </SelectItem>
@@ -148,10 +152,14 @@ export default function GamePage() {
         />
         <div className="relative flex items-center gap-4">
           <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl shrink-0"
+            className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
             style={{ background: `${game.color}20`, border: `1px solid ${game.color}40` }}
           >
-            {game.icon}
+            {(game as any).logoUrl ? (
+              <img src={(game as any).logoUrl} alt={game.name} className="w-full h-full object-contain p-1" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            ) : (
+              <span className="text-3xl">{game.icon}</span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -172,7 +180,7 @@ export default function GamePage() {
               {modes.length > 0 && ` · ${modes.length} modes`}
             </p>
           </div>
-          <Link href={`/submit?game=${game.slug}`}>
+          <Link href={`/submit/${game.slug}`}>
             <Button size="sm" className="shrink-0" data-testid="button-submit-for-game">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Submit Build
@@ -361,7 +369,7 @@ export default function GamePage() {
             <div className="text-center py-16 text-muted-foreground" data-testid="text-empty-state">
               <p className="text-lg font-medium">No builds yet</p>
               <p className="text-sm mt-1">Be the first to submit a build for {game.name}!</p>
-              <Link href={`/submit?game=${game.slug}`}>
+              <Link href={`/submit/${game.slug}`}>
                 <Button className="mt-4">
                   <Plus className="w-4 h-4 mr-2" /> Submit a Build
                 </Button>

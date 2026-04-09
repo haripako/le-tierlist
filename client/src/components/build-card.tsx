@@ -77,7 +77,7 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
 
   return (
     <div
-      className={`group relative rounded-lg border ${tierConfig.color} p-4 transition-all hover:border-opacity-70 hover:shadow-md`}
+      className={`group relative rounded-lg border ${tierConfig.color} p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg hover:shadow-black/20 bg-card/80 backdrop-blur-sm`}
       data-testid={`card-build-${build.id}`}
     >
       {/* Social badges */}
@@ -103,7 +103,8 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
           <div className="flex items-center gap-2 min-w-0">
             {/* Tier badge */}
             <span
-              className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-md text-xs font-bold border ${tierConfig.color}`}
+              className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-md text-sm font-extrabold border-2 ${tierConfig.color}`}
+              style={{ boxShadow: calculatedTier === 'S+' || calculatedTier === 'S' ? '0 0 12px rgba(212,165,55,0.2)' : undefined }}
               data-testid={`badge-tier-${build.id}`}
             >
               {calculatedTier}
@@ -145,7 +146,16 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
           className={`inline-flex items-center gap-1 text-[11px] ${source.color} hover:underline`}
           data-testid={`link-source-${build.id}`}
         >
-          <span>{source.icon}</span>
+          {source.faviconDomain ? (
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${source.faviconDomain}&sz=16`}
+              alt=""
+              className="w-3.5 h-3.5 rounded-sm object-contain"
+              onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
+            />
+          ) : (
+            <span>{source.icon}</span>
+          )}
           <span>{source.name}</span>
           <ExternalLink className="w-2.5 h-2.5" />
         </a>

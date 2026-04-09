@@ -1,6 +1,6 @@
 import {
   games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes, tierVotes, anonTierVotes, socialPosts,
-  bookmarks, anonBookmarks, reports, categories,
+  bookmarks, anonBookmarks, reports, categories, buildSources, socialAccounts,
   type Game, type InsertGame,
   type GameMode, type InsertGameMode,
   type GameClass, type InsertGameClass,
@@ -13,6 +13,8 @@ import {
   type BuildWithSubmitter,
   type Category, type InsertCategory,
   type Bookmark, type AnonBookmark, type Report,
+  type BuildSource, type InsertBuildSource,
+  type SocialAccount, type InsertSocialAccount,
   BUILD_SOURCES,
 } from "@shared/schema";
 import { db } from "./db";
@@ -150,6 +152,20 @@ export interface IStorage {
   deleteSocialPostsForBuild(buildId: number): void;
   hasSocialPostsForBuild(buildId: number): boolean;
   getSocialStats(): { pending: number; postedThisWeek: number; byPlatform: Record<string, number> };
+
+  // Build sources
+  getBuildSources(): BuildSource[];
+  getBuildSource(id: number): BuildSource | undefined;
+  createBuildSource(source: InsertBuildSource): BuildSource;
+  updateBuildSource(id: number, data: Partial<InsertBuildSource>): BuildSource | undefined;
+  deleteBuildSource(id: number): void;
+
+  // Social accounts
+  getSocialAccounts(): SocialAccount[];
+  getSocialAccount(id: number): SocialAccount | undefined;
+  createSocialAccount(account: InsertSocialAccount): SocialAccount;
+  updateSocialAccount(id: number, data: Partial<InsertSocialAccount>): SocialAccount | undefined;
+  deleteSocialAccount(id: number): void;
 }
 
 // ─── Database storage ──────────────────────────────────────────
@@ -787,6 +803,52 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { pending, postedThisWeek, byPlatform };
+  }
+
+  // ── Build sources ──
+
+  getBuildSources(): BuildSource[] {
+    return db.select().from(buildSources).orderBy(buildSources.id).all();
+  }
+
+  getBuildSource(id: number): BuildSource | undefined {
+    return db.select().from(buildSources).where(eq(buildSources.id, id)).get();
+  }
+
+  createBuildSource(source: InsertBuildSource): BuildSource {
+    return db.insert(buildSources).values({ ...source, createdAt: new Date().toISOString() }).returning().get();
+  }
+
+  updateBuildSource(id: number, data: Partial<InsertBuildSource>): BuildSource | undefined {
+    db.update(buildSources).set(data).where(eq(buildSources.id, id)).run();
+    return this.getBuildSource(id);
+  }
+
+  deleteBuildSource(id: number): void {
+    db.delete(buildSources).where(eq(buildSources.id, id)).run();
+  }
+
+  // ── Social accounts ──
+
+  getSocialAccounts(): SocialAccount[] {
+    return db.select().from(socialAccounts).orderBy(socialAccounts.id).all();
+  }
+
+  getSocialAccount(id: number): SocialAccount | undefined {
+    return db.select().from(socialAccounts).where(eq(socialAccounts.id, id)).get();
+  }
+
+  createSocialAccount(account: InsertSocialAccount): SocialAccount {
+    return db.insert(socialAccounts).values({ ...account, createdAt: new Date().toISOString() }).returning().get();
+  }
+
+  updateSocialAccount(id: number, data: Partial<InsertSocialAccount>): SocialAccount | undefined {
+    db.update(socialAccounts).set(data).where(eq(socialAccounts.id, id)).run();
+    return this.getSocialAccount(id);
+  }
+
+  deleteSocialAccount(id: number): void {
+    db.delete(socialAccounts).where(eq(socialAccounts.id, id)).run();
   }
 }
 

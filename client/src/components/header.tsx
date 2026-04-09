@@ -91,9 +91,9 @@ export default function Header() {
     }
   };
 
-  // Build submit URL: append game slug when on a game page
+  // Build submit URL: use hash-based route /submit/SLUG when on a game page
   const gameMatch = location.match(/^\/game\/([^?/]+)/);
-  const submitUrl = gameMatch ? `/submit?game=${gameMatch[1]}` : "/submit";
+  const submitUrl = gameMatch ? `/submit/${gameMatch[1]}` : "/submit";
 
   return (
     <>

@@ -23,6 +23,7 @@ export const games = sqliteTable("games", {
   name: text("name").notNull(),
   color: text("color").notNull().default("#d4a537"),
   icon: text("icon").notNull().default("⚔️"),
+  logoUrl: text("logo_url"),
   category: text("category").notNull().default("arpg"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   hasSeasons: integer("has_seasons", { mode: "boolean" }).notNull().default(false),
@@ -313,6 +314,41 @@ export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
 
 export type SocialPost = typeof socialPosts.$inferSelect;
 export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
+
+// ─ Build sources table (admin reference directory) ─
+export const buildSources = sqliteTable("build_sources", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // website | youtube_channel | reddit
+  url: text("url").notNull(),
+  gameId: integer("game_id"), // nullable FK
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  lastCheckedAt: text("last_checked_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertBuildSourceSchema = createInsertSchema(buildSources).omit({
+  id: true, createdAt: true,
+});
+export type BuildSource = typeof buildSources.$inferSelect;
+export type InsertBuildSource = z.infer<typeof insertBuildSourceSchema>;
+
+// ─ Social accounts table ─
+export const socialAccounts = sqliteTable("social_accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  platform: text("platform").notNull(), // twitter | instagram | tiktok | youtube
+  accountName: text("account_name").notNull(),
+  accountUrl: text("account_url"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertSocialAccountSchema = createInsertSchema(socialAccounts).omit({
+  id: true, createdAt: true,
+});
+export type SocialAccount = typeof socialAccounts.$inferSelect;
+export type InsertSocialAccount = z.infer<typeof insertSocialAccountSchema>;
+
 
 // ─── Static source config ─────────────────────────────────────
 export const BUILD_SOURCES = [

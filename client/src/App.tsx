@@ -18,6 +18,7 @@ import AdminUsersPage from "./pages/admin-users";
 import AdminSocialPage from "./pages/admin-social";
 import AdminCategoriesPage from "./pages/admin-categories";
 import AdminReportsPage from "./pages/admin-reports";
+import AdminSourcesPage from "./pages/admin-sources";
 import SettingsPage from "./pages/settings";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
@@ -31,6 +32,7 @@ function AppRouter() {
           <Route path="/" component={HomePage} />
           <Route path="/game/:slug" component={GamePage} />
           <Route path="/submit" component={SubmitBuildPage} />
+          <Route path="/submit/:gameSlug" component={SubmitBuildPage} />
           <Route path="/build/:id" component={BuildDetailPage} />
           <Route path="/user/:id" component={UserProfilePage} />
           <Route path="/admin" component={AdminDashboardPage} />
@@ -39,6 +41,7 @@ function AppRouter() {
           <Route path="/admin/classes" component={AdminClassesPage} />
           <Route path="/admin/seasons" component={AdminSeasonsPage} />
           <Route path="/admin/builds" component={AdminBuildsPage} />
+          <Route path="/admin/sources" component={AdminSourcesPage} />
           <Route path="/admin/social" component={AdminSocialPage} />
           <Route path="/admin/reports" component={AdminReportsPage} />
           <Route path="/admin/users" component={AdminUsersPage} />

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PLAYSTYLES, SOURCE_CONFIG, detectSourceClient } from "@/lib/constants";
@@ -32,15 +32,12 @@ type ExtractedBuild = {
 
 export default function SubmitBuildPage() {
   const [, navigate] = useLocation();
-  const search = useSearch();
+  const [matchSubmitSlug, paramsSubmitSlug] = useRoute("/submit/:gameSlug");
   const { toast } = useToast();
   const { user, isLoggedIn } = useAuth();
 
-  // Parse ?game= param from URL
-  const preselectedGame = useMemo(() => {
-    const p = new URLSearchParams(search);
-    return p.get("game") ?? "";
-  }, [search]);
+  // Read game slug from hash route param: /submit/diablo-4
+  const preselectedGame = matchSubmitSlug ? (paramsSubmitSlug?.gameSlug ?? "") : "";
 
   // Steps: "game" | "url" | "edit"
   const [step, setStep] = useState<"game" | "url" | "edit">(preselectedGame ? "url" : "game");
@@ -238,7 +235,11 @@ export default function SubmitBuildPage() {
                       className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-all text-left group"
                       data-testid={`button-select-game-${g.slug}`}
                     >
-                      <span className="text-xl">{g.icon}</span>
+                      {(g as any).logoUrl ? (
+                        <img src={(g as any).logoUrl} alt={g.name} className="w-6 h-6 object-contain shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                      ) : (
+                        <span className="text-xl">{g.icon}</span>
+                      )}
                       <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{g.name}</span>
                     </button>
                   ))}
@@ -257,7 +258,11 @@ export default function SubmitBuildPage() {
               <button onClick={() => setStep("game")} className="text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <span className="text-xl">{selectedGame.icon}</span>
+              {(selectedGame as any).logoUrl ? (
+                <img src={(selectedGame as any).logoUrl} alt={selectedGame.name} className="w-6 h-6 object-contain" />
+              ) : (
+                <span className="text-xl">{selectedGame.icon}</span>
+              )}
               <span className="text-sm font-semibold text-foreground">{selectedGame.name}</span>
             </div>
           )}
@@ -306,7 +311,11 @@ export default function SubmitBuildPage() {
             </button>
             {selectedGame && (
               <>
-                <span className="text-xl">{selectedGame.icon}</span>
+                {(selectedGame as any).logoUrl ? (
+                  <img src={(selectedGame as any).logoUrl} alt={selectedGame.name} className="w-6 h-6 object-contain" />
+                ) : (
+                  <span className="text-xl">{selectedGame.icon}</span>
+                )}
                 <span className="text-sm font-semibold text-foreground">{selectedGame.name}</span>
               </>
             )}

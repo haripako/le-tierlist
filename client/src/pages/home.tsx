@@ -64,6 +64,11 @@ export default function HomePage() {
     <div className="space-y-10">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card px-6 py-8 sm:px-10 sm:py-10">
+        {/* Animated gradient background */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none animate-gradient"
+          style={{ background: "linear-gradient(135deg, hsl(38 90% 50%), hsl(270 60% 50%), hsl(200 80% 40%), hsl(38 90% 50%))" }}
+        />
         {/* Ambient background glow */}
         <div
           className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none"
@@ -173,10 +178,14 @@ export default function HomePage() {
                 />
                 <div className="relative p-6 flex items-center gap-5">
                   <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl shrink-0 shadow-lg transition-transform group-hover:scale-105 duration-200"
+                    className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-105 duration-200 overflow-hidden"
                     style={{ background: `${featured.color}22`, border: `1px solid ${featured.color}44` }}
                   >
-                    {featured.icon}
+                    {(featured as any).logoUrl ? (
+                      <img src={(featured as any).logoUrl} alt={featured.name} className="w-full h-full object-contain p-1" onError={e => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="text-3xl">${featured.icon}</span>`; }} />
+                    ) : (
+                      <span className="text-3xl">{featured.icon}</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -217,10 +226,14 @@ export default function HomePage() {
                       data-testid={`card-trending-game-${game.slug}`}
                     >
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
                         style={{ background: `${game.color}18` }}
                       >
-                        {game.icon}
+                        {(game as any).logoUrl ? (
+                          <img src={(game as any).logoUrl} alt={game.name} className="w-8 h-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                        ) : (
+                          <span className="text-xl">{game.icon}</span>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{game.name}</p>
@@ -281,6 +294,7 @@ export default function HomePage() {
             return (
               <section key={cat} className="space-y-4" data-testid={`section-category-${cat}`}>
                 <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 rounded-full bg-primary" />
                   <Layers className="w-4 h-4 text-primary" />
                   <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                     {getCategoryLabel(cat)}
@@ -307,10 +321,14 @@ export default function HomePage() {
                         />
                         <div className="relative p-4 flex items-center gap-3">
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-105 duration-200"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 overflow-hidden"
                             style={{ background: `${game.color}18` }}
                           >
-                            {game.icon}
+                            {(game as any).logoUrl ? (
+                              <img src={(game as any).logoUrl} alt={game.name} className="w-8 h-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                            ) : (
+                              <span className="text-xl">{game.icon}</span>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-game-name-${game.slug}`}>

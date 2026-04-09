@@ -39,10 +39,12 @@ function initDB() {
     name TEXT NOT NULL,
     color TEXT NOT NULL DEFAULT '#d4a537',
     icon TEXT NOT NULL DEFAULT '⚔️',
+    logo_url TEXT,
     category TEXT NOT NULL DEFAULT 'arpg',
     is_active INTEGER NOT NULL DEFAULT 1,
     has_seasons INTEGER NOT NULL DEFAULT 0,
     sort_order INTEGER NOT NULL DEFAULT 0,
+    last_featured_at TEXT,
     created_at TEXT NOT NULL
   )`);
 
@@ -181,10 +183,33 @@ function initDB() {
     created_at TEXT NOT NULL
   )`);
 
+  // Build sources (reference directory)
+  db.run(sql`CREATE TABLE IF NOT EXISTS build_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    url TEXT NOT NULL,
+    game_id INTEGER,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_checked_at TEXT,
+    created_at TEXT NOT NULL
+  )`);
+
+  // Social accounts
+  db.run(sql`CREATE TABLE IF NOT EXISTS social_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL,
+    account_name TEXT NOT NULL,
+    account_url TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  )`);
+
   // Add new columns to existing tables if not exists
   try { db.run(sql`ALTER TABLE users ADD COLUMN bio TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE users ADD COLUMN avatar_emoji TEXT DEFAULT '🎮'`); } catch {}
   try { db.run(sql`ALTER TABLE games ADD COLUMN last_featured_at TEXT`); } catch {}
+  try { db.run(sql`ALTER TABLE games ADD COLUMN logo_url TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN views INTEGER NOT NULL DEFAULT 0`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN social_score INTEGER NOT NULL DEFAULT 0`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN social_views INTEGER NOT NULL DEFAULT 0`); } catch {}
@@ -296,7 +321,7 @@ function seedData() {
   const createdGames: Record<string, any> = {};
   for (const g of gamesData) {
     createdGames[g.slug] = storage.createGame({
-      slug: g.slug, name: g.name, color: g.color, icon: g.icon,
+      slug: g.slug, name: g.name, color: g.color, icon: g.icon, logoUrl: `/game-logos/${g.slug}.png`,
       category: g.category as any, isActive: true, sortOrder: g.sortOrder, hasSeasons: g.hasSeasons,
     });
   }
@@ -2582,6 +2607,32 @@ function seedData() {
     },
   ];
   for (const b of cdBuilds) insertBuild(cdId, cdDefaultMode.id, null, b);
+
+  // ── Build Sources (reference directory) ──
+  const buildSourceData = [
+    { name: "Maxroll Last Epoch", type: "website", url: "https://maxroll.gg/last-epoch/build-guides", gameId: createdGames["last-epoch"].id },
+    { name: "Maxroll Diablo 4", type: "website", url: "https://maxroll.gg/d4/build-guides", gameId: createdGames["diablo-4"].id },
+    { name: "Maxroll D2R", type: "website", url: "https://maxroll.gg/d2/guides", gameId: createdGames["diablo-2-resurrected"].id },
+    { name: "Maxroll D3", type: "website", url: "https://maxroll.gg/d3/tier-list", gameId: createdGames["diablo-3"].id },
+    { name: "Icy Veins Diablo 4", type: "website", url: "https://www.icy-veins.com/d4/tier-list", gameId: createdGames["diablo-4"].id },
+    { name: "Mobalytics PoE 2", type: "website", url: "https://mobalytics.gg/poe-2/builds", gameId: createdGames["path-of-exile-2"].id },
+    { name: "YouTube - Boardman21", type: "youtube_channel", url: "https://www.youtube.com/@Boardman21", gameId: createdGames["last-epoch"].id },
+    { name: "YouTube - Maxroll", type: "youtube_channel", url: "https://www.youtube.com/@MaxrollGG", gameId: null },
+    { name: "YouTube - Subtractem", type: "youtube_channel", url: "https://www.youtube.com/@Subtractem", gameId: createdGames["last-epoch"].id },
+    { name: "YouTube - Raxxanterax", type: "youtube_channel", url: "https://www.youtube.com/@raaborern", gameId: null },
+    { name: "Reddit r/LastEpoch", type: "reddit", url: "https://www.reddit.com/r/LastEpoch", gameId: createdGames["last-epoch"].id },
+    { name: "Reddit r/diablo4", type: "reddit", url: "https://www.reddit.com/r/diablo4", gameId: createdGames["diablo-4"].id },
+    { name: "Reddit r/pathofexile2", type: "reddit", url: "https://www.reddit.com/r/PathOfExile2", gameId: createdGames["path-of-exile-2"].id },
+  ];
+  for (const s of buildSourceData) {
+    storage.createBuildSource({ name: s.name, type: s.type, url: s.url, gameId: s.gameId, isActive: true });
+  }
+
+  // ── Social Accounts ──
+  storage.createSocialAccount({ platform: "twitter", accountName: "@BuildTier", accountUrl: "https://twitter.com/BuildTier", isActive: true });
+  storage.createSocialAccount({ platform: "instagram", accountName: "buildtier_official", accountUrl: "https://instagram.com/buildtier_official", isActive: true });
+  storage.createSocialAccount({ platform: "tiktok", accountName: "@buildtier", accountUrl: "https://tiktok.com/@buildtier", isActive: false });
+  storage.createSocialAccount({ platform: "youtube", accountName: "BuildTier", accountUrl: "https://youtube.com/@BuildTier", isActive: false });
 }
 
 // ─── Routes ────────────────────────────────────────────────────
@@ -3149,6 +3200,85 @@ export async function registerRoutes(server: Server, app: Express) {
     const admin = storage.getUserById(parseInt(adminUserId as string));
     if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
     res.json(storage.getSocialStats());
+  });
+
+  // ── Build Sources (admin reference directory) ──
+
+  app.get("/api/admin/sources", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    res.json(storage.getBuildSources());
+  });
+
+  app.post("/api/admin/sources", (req, res) => {
+    const { adminUserId, ...data } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const source = storage.createBuildSource({
+      name: data.name,
+      type: data.type,
+      url: data.url,
+      gameId: data.gameId || null,
+      isActive: data.isActive !== false,
+    });
+    res.json(source);
+  });
+
+  app.patch("/api/admin/sources/:id", (req, res) => {
+    const { adminUserId, ...data } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateBuildSource(parseInt(req.params.id), data);
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/sources/:id", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    storage.deleteBuildSource(parseInt(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // ── Social Accounts ──
+
+  app.get("/api/admin/social-accounts", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    res.json(storage.getSocialAccounts());
+  });
+
+  app.post("/api/admin/social-accounts", (req, res) => {
+    const { adminUserId, ...data } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const account = storage.createSocialAccount({
+      platform: data.platform,
+      accountName: data.accountName,
+      accountUrl: data.accountUrl || null,
+      isActive: data.isActive !== false,
+    });
+    res.json(account);
+  });
+
+  app.patch("/api/admin/social-accounts/:id", (req, res) => {
+    const { adminUserId, ...data } = req.body;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    const updated = storage.updateSocialAccount(parseInt(req.params.id), data);
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/social-accounts/:id", (req, res) => {
+    const { adminUserId } = req.query;
+    const admin = storage.getUserById(parseInt(adminUserId as string));
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin only" });
+    storage.deleteSocialAccount(parseInt(req.params.id));
+    res.json({ ok: true });
   });
 
   // ── Admin endpoints ──

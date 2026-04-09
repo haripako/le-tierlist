@@ -16,21 +16,21 @@ export const GAME_CATEGORIES = [
 ] as const;
 
 // Source config for build guide links — expanded with new sites
-export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: string }> = {
-  lastepochtools: { name: "LE Tools", icon: "🔧", color: "text-yellow-400" },
-  maxroll: { name: "Maxroll", icon: "📊", color: "text-blue-400" },
-  youtube: { name: "YouTube", icon: "▶️", color: "text-red-400" },
-  youtube_short: { name: "YouTube", icon: "▶️", color: "text-red-400" },
-  mobalytics: { name: "Mobalytics", icon: "📈", color: "text-green-400" },
-  reddit: { name: "Reddit", icon: "💬", color: "text-orange-400" },
-  "icy-veins": { name: "Icy Veins", icon: "❄️", color: "text-cyan-400" },
-  fextralife: { name: "Fextralife", icon: "📖", color: "text-purple-400" },
-  game8: { name: "Game8", icon: "🎮", color: "text-indigo-400" },
-  "poe-ninja": { name: "PoE Ninja", icon: "🥷", color: "text-yellow-300" },
-  poebuilds: { name: "PoE Builds", icon: "🔥", color: "text-orange-300" },
-  poewiki: { name: "PoE Wiki", icon: "📚", color: "text-gray-400" },
-  "builds-gg": { name: "Builds.gg", icon: "🏗️", color: "text-emerald-400" },
-  hacktheminotaur: { name: "HackTheMinotaur", icon: "🐂", color: "text-amber-400" },
+export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: string; faviconDomain?: string }> = {
+  lastepochtools: { name: "LE Tools", icon: "🔧", color: "text-yellow-400", faviconDomain: "lastepochtools.com" },
+  maxroll: { name: "Maxroll", icon: "📊", color: "text-blue-400", faviconDomain: "maxroll.gg" },
+  youtube: { name: "YouTube", icon: "▶️", color: "text-red-400", faviconDomain: "youtube.com" },
+  youtube_short: { name: "YouTube", icon: "▶️", color: "text-red-400", faviconDomain: "youtube.com" },
+  mobalytics: { name: "Mobalytics", icon: "📈", color: "text-green-400", faviconDomain: "mobalytics.gg" },
+  reddit: { name: "Reddit", icon: "💬", color: "text-orange-400", faviconDomain: "reddit.com" },
+  "icy-veins": { name: "Icy Veins", icon: "❄️", color: "text-cyan-400", faviconDomain: "icy-veins.com" },
+  fextralife: { name: "Fextralife", icon: "📖", color: "text-purple-400", faviconDomain: "fextralife.com" },
+  game8: { name: "Game8", icon: "🎮", color: "text-indigo-400", faviconDomain: "game8.co" },
+  "poe-ninja": { name: "PoE Ninja", icon: "🥷", color: "text-yellow-300", faviconDomain: "poe.ninja" },
+  poebuilds: { name: "PoE Builds", icon: "🔥", color: "text-orange-300", faviconDomain: "poebuilds.net" },
+  poewiki: { name: "PoE Wiki", icon: "📚", color: "text-gray-400", faviconDomain: "poewiki.net" },
+  "builds-gg": { name: "Builds.gg", icon: "🏗️", color: "text-emerald-400", faviconDomain: "builds.gg" },
+  hacktheminotaur: { name: "HackTheMinotaur", icon: "🐂", color: "text-amber-400", faviconDomain: "hacktheminotaur.com" },
   other: { name: "Link", icon: "🔗", color: "text-muted-foreground" },
 };
 
