@@ -198,6 +198,29 @@ function initDB() {
   try { db.run(sql`ALTER TABLE builds ADD COLUMN difficulty TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN budget_level TEXT`); } catch {}
   try { db.run(sql`ALTER TABLE builds ADD COLUMN thumbnail_url TEXT`); } catch {}
+  // New tier voting columns
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN calculated_tier TEXT NOT NULL DEFAULT 'N'`); } catch {}
+  try { db.run(sql`ALTER TABLE builds ADD COLUMN tier_vote_count INTEGER NOT NULL DEFAULT 0`); } catch {}
+
+  // Tier votes table (registered users)
+  db.run(sql`CREATE TABLE IF NOT EXISTS tier_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    tier_vote TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tier_votes_unique ON tier_votes(build_id, user_id)`);
+
+  // Anon tier votes
+  db.run(sql`CREATE TABLE IF NOT EXISTS anon_tier_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    build_id INTEGER NOT NULL,
+    voter_hash TEXT NOT NULL,
+    tier_vote TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_anon_tier_votes_unique ON anon_tier_votes(build_id, voter_hash)`);
 
   // Seed categories if empty
   const catCount = db.all(sql`SELECT count(*) as c FROM categories`);
@@ -3145,81 +3168,76 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json(allUsers.map(({ passwordHash, ...u }) => u));
   });
 
-  // ── Votes ──
+  // ── Tier Votes ──
 
-  app.post("/api/builds/:id/vote", (req, res) => {
+  const VALID_TIERS = ["S+", "S", "A", "B", "C", "D"];
+
+  app.post("/api/builds/:id/tier-vote", (req, res) => {
     const buildId = parseInt(req.params.id);
-    const { userId, voteType } = req.body;
+    const { tierVote, userId } = req.body;
 
-    if (!userId || !["up", "down"].includes(voteType)) {
-      return res.status(400).json({ error: "Invalid vote" });
-    }
-
-    const build = storage.getBuild(buildId);
-    if (!build) return res.status(404).json({ error: "Build not found" });
-
-    const existing = storage.getVote(buildId, userId);
-    if (existing && existing.voteType === voteType) {
-      storage.removeVote(buildId, userId);
-      return res.json({ build: storage.getBuild(buildId), action: "removed" });
-    }
-
-    storage.castVote(buildId, userId, voteType);
-    res.json({ build: storage.getBuild(buildId), action: "voted" });
-  });
-
-  app.post("/api/builds/:id/anon-vote", (req, res) => {
-    const buildId = parseInt(req.params.id);
-    const { voteType } = req.body;
-
-    if (!["up", "down"].includes(voteType)) {
-      return res.status(400).json({ error: "Invalid vote type" });
+    if (!VALID_TIERS.includes(tierVote)) {
+      return res.status(400).json({ error: "Invalid tier vote" });
     }
 
     const build = storage.getBuild(buildId);
     if (!build) return res.status(404).json({ error: "Build not found" });
 
     const voterHash = getVoterHash(req, res);
-    const existing = db.all(sql`SELECT * FROM anon_votes WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
-    const existingVote = existing[0] as any;
 
-    if (existingVote) {
-      if (existingVote.vote_type === voteType) {
-        // Toggle off
-        db.run(sql`DELETE FROM anon_votes WHERE id = ${existingVote.id}`);
-        if (voteType === "up") {
-          db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
-          if (build.submitterId) storage.updateKarma(build.submitterId, -1);
-        } else {
-          db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
-          if (build.submitterId) storage.updateKarma(build.submitterId, 1);
-        }
-        return res.json({ build: storage.getBuild(buildId), action: "removed", voterHash });
-      } else {
-        // Switch vote
-        if (existingVote.vote_type === "up") {
-          db.run(sql`UPDATE builds SET upvotes = upvotes - 1 WHERE id = ${buildId}`);
-          if (build.submitterId) storage.updateKarma(build.submitterId, -1);
-        } else {
-          db.run(sql`UPDATE builds SET downvotes = downvotes - 1 WHERE id = ${buildId}`);
-          if (build.submitterId) storage.updateKarma(build.submitterId, 1);
-        }
-        db.run(sql`UPDATE anon_votes SET vote_type = ${voteType}, created_at = ${new Date().toISOString()} WHERE id = ${existingVote.id}`);
+    if (userId) {
+      // Logged-in user
+      const existing = storage.getTierVote(buildId, userId);
+      if (existing && existing.tierVote === tierVote) {
+        // Toggle off (same tier = remove)
+        storage.removeTierVote(buildId, userId);
+        const dist = storage.getVoteDistribution(buildId);
+        const updatedBuild = storage.getBuild(buildId);
+        return res.json({ build: updatedBuild, distribution: { ...dist, total: updatedBuild!.tierVoteCount, median: updatedBuild!.calculatedTier }, action: "removed" });
       }
+      storage.castTierVote(buildId, userId, tierVote);
     } else {
-      db.run(sql`INSERT INTO anon_votes (build_id, voter_hash, vote_type, created_at) VALUES (${buildId}, ${voterHash}, ${voteType}, ${new Date().toISOString()})`);
+      // Anonymous voter
+      const existing = storage.getAnonTierVote(buildId, voterHash);
+      if (existing && existing.tierVote === tierVote) {
+        storage.removeAnonTierVote(buildId, voterHash);
+        const dist = storage.getVoteDistribution(buildId);
+        const updatedBuild = storage.getBuild(buildId);
+        return res.json({ build: updatedBuild, distribution: { ...dist, total: updatedBuild!.tierVoteCount, median: updatedBuild!.calculatedTier }, action: "removed", voterHash });
+      }
+      storage.castAnonTierVote(buildId, voterHash, tierVote);
     }
 
-    if (voteType === "up") {
-      db.run(sql`UPDATE builds SET upvotes = upvotes + 1 WHERE id = ${buildId}`);
-      if (build.submitterId) storage.updateKarma(build.submitterId, 1);
-    } else {
-      db.run(sql`UPDATE builds SET downvotes = downvotes + 1 WHERE id = ${buildId}`);
-      if (build.submitterId) storage.updateKarma(build.submitterId, -1);
-    }
-
-    res.json({ build: storage.getBuild(buildId), action: "voted", voterHash });
+    const dist = storage.getVoteDistribution(buildId);
+    const updatedBuild = storage.getBuild(buildId);
+    res.json({
+      build: updatedBuild,
+      distribution: { ...dist, total: updatedBuild!.tierVoteCount, median: updatedBuild!.calculatedTier },
+      action: "voted",
+      voterHash,
+    });
   });
+
+  app.get("/api/builds/:id/vote-distribution", (req, res) => {
+    const buildId = parseInt(req.params.id);
+    const build = storage.getBuild(buildId);
+    if (!build) return res.status(404).json({ error: "Build not found" });
+    const dist = storage.getVoteDistribution(buildId);
+    res.json({ ...dist, total: build.tierVoteCount, median: build.calculatedTier });
+  });
+
+  app.get("/api/my-tier-votes", (req, res) => {
+    const { userId } = req.query;
+    const voterHash = getVoterHash(req, res);
+    if (userId) {
+      const votes = storage.getUserTierVotes(parseInt(userId as string));
+      return res.json(votes.map(v => ({ buildId: v.buildId, tierVote: v.tierVote })));
+    }
+    const anonVotes = storage.getAnonTierVotes(voterHash);
+    res.json(anonVotes.map(v => ({ buildId: v.buildId, tierVote: v.tierVote })));
+  });
+
+  // ── Legacy Vote endpoints (kept for backward compat) ──
 
   app.get("/api/votes/user/:userId", (req, res) => {
     res.json(storage.getUserVotes(parseInt(req.params.userId)));
@@ -3260,8 +3278,9 @@ export async function registerRoutes(server: Server, app: Express) {
       }
     }
     db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
-    // Migrate anon bookmarks
+    // Migrate anon bookmarks + tier votes
     storage.migrateAnonBookmarks(voterHash, user.id);
+    storage.migrateAnonTierVotes(voterHash, user.id);
 
     const refreshed = storage.getUserById(user.id);
     const { passwordHash, ...safe } = refreshed || user;
@@ -3289,8 +3308,9 @@ export async function registerRoutes(server: Server, app: Express) {
       }
     }
     db.run(sql`DELETE FROM anon_votes WHERE voter_hash = ${voterHash}`);
-    // Migrate anon bookmarks
+    // Migrate anon bookmarks + tier votes
     storage.migrateAnonBookmarks(voterHash, user.id);
+    storage.migrateAnonTierVotes(voterHash, user.id);
 
     const refreshed = storage.getUserById(user.id);
     const { passwordHash, ...safe } = refreshed || user;
@@ -3362,35 +3382,23 @@ export async function registerRoutes(server: Server, app: Express) {
 // ─── Tier list helper ──────────────────────────────────────────
 
 function buildTierList(allBuilds: any[]) {
-  const scored = allBuilds.map(b => ({
-    ...b,
-    score: b.upvotes - b.downvotes,
-    ratio: b.upvotes + b.downvotes > 0 ? b.upvotes / (b.upvotes + b.downvotes) : 0.5,
-  }));
+  const tiers: Record<string, any[]> = {
+    "S+": [], "S": [], "A": [], "B": [], "C": [], "D": [], "N": []
+  };
 
-  // Separate zero-vote builds (N tier) from voted builds
-  const zeroVote = scored.filter(b => b.upvotes + b.downvotes === 0);
-  const voted = scored.filter(b => b.upvotes + b.downvotes > 0);
+  for (const build of allBuilds) {
+    const tier = build.calculatedTier || build.calculated_tier || "N";
+    if (tiers[tier]) {
+      tiers[tier].push({ ...build, tier });
+    } else {
+      tiers["N"].push({ ...build, tier: "N" });
+    }
+  }
 
-  voted.sort((a, b) => b.score - a.score);
+  // Sort within each tier by tierVoteCount descending (more votes = higher confidence)
+  for (const tier of Object.keys(tiers)) {
+    tiers[tier].sort((a, b) => (b.tierVoteCount || b.tier_vote_count || 0) - (a.tierVoteCount || a.tier_vote_count || 0));
+  }
 
-  const total = voted.length;
-  const tiered = voted.map((build, i) => {
-    const pct = total > 0 ? i / total : 1;
-    let tier: string;
-    if (pct < 0.1) tier = "S";
-    else if (pct < 0.25) tier = "A";
-    else if (pct < 0.50) tier = "B";
-    else if (pct < 0.75) tier = "C";
-    else tier = "D";
-    return { ...build, tier };
-  });
-
-  // Zero-vote builds go to N tier
-  const nTier = zeroVote.map(b => ({ ...b, tier: "N" }));
-
-  const tierList: Record<string, typeof tiered> = { S: [], A: [], B: [], C: [], D: [], N: [] };
-  for (const build of tiered) tierList[build.tier].push(build);
-  for (const build of nTier) tierList["N"].push(build);
-  return tierList;
+  return tiers;
 }

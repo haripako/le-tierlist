@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useVotes } from "@/hooks/use-votes";
+import { useTierVotes } from "@/hooks/use-tier-votes";
 import { useBookmarks } from "@/hooks/use-bookmarks";
 import { useAuth } from "@/hooks/use-auth";
-import { PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
+import { PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle, TIER_CONFIG, TIER_VOTE_CONFIG } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,8 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronUp, ChevronDown, ArrowLeft, ExternalLink, Calendar, User, Star, Bookmark, Flag, LogIn } from "lucide-react";
+import { ArrowLeft, ExternalLink, Calendar, User, Star, Bookmark, Flag, LogIn } from "lucide-react";
 import type { BuildWithSubmitter } from "@shared/schema";
+
+const TIER_ORDER = ["S+", "S", "A", "B", "C", "D"] as const;
+
+type VoteDistribution = Record<string, number> & { total: number; median: string };
 
 export default function BuildDetailPage() {
   const [, params] = useRoute("/build/:id");
@@ -35,9 +39,19 @@ export default function BuildDetailPage() {
     enabled: buildId > 0,
   });
 
-  const { getVoteState, castVote, isPending } = useVotes([["/api/builds", buildId]]);
+  const { data: distribution, isLoading: distLoading } = useQuery<VoteDistribution>({
+    queryKey: [`/api/builds/${buildId}/vote-distribution`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/builds/${buildId}/vote-distribution`);
+      return res.json();
+    },
+    enabled: buildId > 0,
+    staleTime: 10_000,
+  });
+
+  const { getMyVote, castVote, isPending } = useTierVotes([["/api/builds", buildId], [`/api/builds/${buildId}/vote-distribution`]]);
   const { isBookmarked, toggleBookmark } = useBookmarks([["/api/builds", buildId]]);
-  const voteState = build ? getVoteState(build.id) : null;
+  const myVote = build ? getMyVote(build.id) : null;
   const bookmarked = build ? isBookmarked(build.id) : false;
 
   const reportMutation = useMutation({
@@ -73,8 +87,9 @@ export default function BuildDetailPage() {
   const playstyle = PLAYSTYLES.find(p => p.id === build.playstyle);
   const source = SOURCE_CONFIG[build.sourceType] || SOURCE_CONFIG.other;
   const skills: string[] = (() => { try { return JSON.parse(build.mainSkills); } catch { return []; } })();
-  const score = build.upvotes - build.downvotes;
   const thumbnailUrl = (build as any).thumbnailUrl as string | null | undefined;
+  const calculatedTier = build.calculatedTier || "N";
+  const tierConfig = TIER_CONFIG[calculatedTier as keyof typeof TIER_CONFIG] || TIER_CONFIG.N;
 
   // Parse rich content
   const pros: string[] = (() => { try { return JSON.parse((build as any).pros || "[]"); } catch { return []; } })();
@@ -95,6 +110,10 @@ export default function BuildDetailPage() {
     expensive: { label: "Expensive", cls: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
     endgame: { label: "Endgame", cls: "bg-red-500/15 text-red-400 border border-red-500/30" },
   };
+
+  // Distribution bar max for scaling
+  const maxVotes = distribution ? Math.max(...TIER_ORDER.map(t => distribution[t] ?? 0), 1) : 1;
+  const totalVotes = distribution?.total ?? build.tierVoteCount ?? 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -131,12 +150,21 @@ export default function BuildDetailPage() {
       )}
 
       <div className="bg-card border border-border rounded-lg p-6 space-y-5">
-        {/* Header row: title + vote */}
+        {/* Header row: title + tier badge */}
         <div className="flex items-start gap-4">
           <div className="flex-1 min-w-0 space-y-2">
-            <h1 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }} data-testid="text-build-name">
-              {build.name}
-            </h1>
+            <div className="flex items-center gap-3">
+              {/* Tier badge */}
+              <span
+                className={`inline-flex items-center justify-center w-12 h-12 rounded-lg text-lg font-bold border ${tierConfig.color} shrink-0`}
+                data-testid="badge-calculated-tier"
+              >
+                {calculatedTier}
+              </span>
+              <h1 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }} data-testid="text-build-name">
+                {build.name}
+              </h1>
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs" style={{ borderColor: `${build.gameColor}60`, color: build.gameColor }}>
                 {build.gameIcon} {build.gameName}
@@ -153,40 +181,6 @@ export default function BuildDetailPage() {
                 <Badge variant="secondary" className="text-xs">🗓 {build.seasonName}</Badge>
               )}
             </div>
-          </div>
-
-          {/* Reddit-style vote column */}
-          <div className="flex flex-col items-center gap-1 shrink-0 min-w-[52px]">
-            <button
-              onClick={() => castVote(build.id, "up")}
-              disabled={isPending}
-              className={`p-2 rounded-lg transition-colors ${
-                voteState === "up"
-                  ? "text-primary bg-primary/15"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-              }`}
-              data-testid="button-upvote"
-            >
-              <ChevronUp className="w-5 h-5" />
-            </button>
-            <span
-              className={`text-lg font-bold tabular-nums ${score > 0 ? "text-primary" : score < 0 ? "text-red-400" : "text-muted-foreground"}`}
-              data-testid="text-score"
-            >
-              {score > 0 ? "+" : ""}{score}
-            </span>
-            <button
-              onClick={() => castVote(build.id, "down")}
-              disabled={isPending}
-              className={`p-2 rounded-lg transition-colors ${
-                voteState === "down"
-                  ? "text-blue-400 bg-blue-500/15"
-                  : "text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10"
-              }`}
-              data-testid="button-downvote"
-            >
-              <ChevronDown className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
@@ -206,10 +200,10 @@ export default function BuildDetailPage() {
           <ExternalLink className="w-4 h-4 shrink-0" />
         </a>
 
-        {/* Engagement text highlight */}
+        {/* Engagement text highlight — bigger, not italic */}
         {engagementText && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-3" data-testid="text-engagement-quote">
-            <p className="text-sm text-primary italic leading-relaxed">" {engagementText} "</p>
+          <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-4" data-testid="text-engagement-quote">
+            <p className="text-base text-primary leading-relaxed font-medium">"{engagementText}"</p>
           </div>
         )}
 
@@ -236,12 +230,12 @@ export default function BuildDetailPage() {
           </div>
         )}
 
-        {/* Pros & Cons */}
+        {/* ✅ Why Play / ⚠️ Things to Consider */}
         {(pros.length > 0 || cons.length > 0) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {pros.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-green-400 mb-2">✅ Strengths</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-green-400 mb-2">✅ Why Play This Build</p>
                 <ul className="space-y-1.5">
                   {pros.map((pro, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -254,7 +248,7 @@ export default function BuildDetailPage() {
             )}
             {cons.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">⚠️ Weaknesses</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">⚠️ Things to Consider</p>
                 <ul className="space-y-1.5">
                   {cons.map((con, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -280,22 +274,89 @@ export default function BuildDetailPage() {
           </div>
         )}
 
-        {/* Votes breakdown */}
-        <div className="flex items-center gap-4 py-3 border-t border-border">
-          <div className="flex items-center gap-1.5 text-sm">
-            <ChevronUp className="w-4 h-4 text-primary" />
-            <span className="font-medium text-primary">{build.upvotes}</span>
-            <span className="text-muted-foreground">upvotes</span>
+        {/* 📊 Community Rating section */}
+        <div className="border-t border-border pt-5 space-y-4" data-testid="section-community-rating">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">📊 Community Rating</p>
+
+          {/* YOUR VOTE row */}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground font-medium">Your Rating:</p>
+            <div className="flex items-center gap-1.5 flex-wrap" data-testid="tier-vote-buttons-detail">
+              {TIER_ORDER.map(t => {
+                const cfg = TIER_VOTE_CONFIG[t];
+                const isActive = myVote === t;
+                const tc = TIER_CONFIG[t as keyof typeof TIER_CONFIG];
+                return (
+                  <button
+                    key={t}
+                    onClick={() => castVote(build.id, t)}
+                    disabled={isPending}
+                    title={`Vote ${t} tier — ${tc?.description ?? ""}`}
+                    data-testid={`button-tier-vote-${t}`}
+                    className={`
+                      inline-flex items-center justify-center
+                      px-3 py-1.5 rounded-md text-sm font-bold
+                      border transition-all
+                      ${isActive
+                        ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder} scale-110 shadow-md`
+                        : `${cfg.bg} ${cfg.text} ${cfg.border} hover:scale-105`
+                      }
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                    `}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+            {myVote && (
+              <p className="text-xs text-muted-foreground">
+                You rated this <span className={`font-bold ${(TIER_CONFIG[myVote as keyof typeof TIER_CONFIG] || TIER_CONFIG.N).textColor}`}>{myVote}</span>
+                {" "}· <button className="text-primary hover:underline" onClick={() => castVote(build.id, myVote)}>Remove</button>
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-1.5 text-sm">
-            <ChevronDown className="w-4 h-4 text-red-400" />
-            <span className="font-medium text-red-400">{build.downvotes}</span>
-            <span className="text-muted-foreground">downvotes</span>
-          </div>
-          {build.upvotes + build.downvotes > 0 && (
-            <span className="text-xs text-muted-foreground ml-auto">
-              {Math.round(build.upvotes / (build.upvotes + build.downvotes) * 100)}% upvoted
-            </span>
+
+          {/* Community median summary */}
+          {totalVotes > 0 ? (
+            <div className="flex items-center gap-3">
+              <span className={`text-2xl font-bold ${tierConfig.textColor}`} data-testid="text-community-tier">
+                {calculatedTier}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{tierConfig.description} tier</p>
+                <p className="text-xs text-muted-foreground">{totalVotes} vote{totalVotes === 1 ? "" : "s"} · community median</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No votes yet — be the first to rate this build!</p>
+          )}
+
+          {/* Distribution bars */}
+          {!distLoading && distribution && totalVotes > 0 && (
+            <div className="space-y-1.5" data-testid="vote-distribution">
+              {TIER_ORDER.map(t => {
+                const count = distribution[t] ?? 0;
+                const pct = maxVotes > 0 ? (count / maxVotes) * 100 : 0;
+                const tc = TIER_CONFIG[t as keyof typeof TIER_CONFIG];
+                const isMedian = t === calculatedTier;
+                return (
+                  <div key={t} className="flex items-center gap-2">
+                    <span className={`w-6 text-xs font-bold text-right shrink-0 ${tc?.textColor}`}>{t}</span>
+                    <div className="flex-1 h-4 bg-secondary rounded-sm overflow-hidden">
+                      <div
+                        className={`h-full rounded-sm transition-all ${isMedian ? tc?.bgAccent : "bg-muted-foreground/30"}`}
+                        style={{ width: `${pct}%` }}
+                        data-testid={`bar-tier-${t}`}
+                      />
+                    </div>
+                    <span className={`text-xs tabular-nums w-8 shrink-0 ${count > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
@@ -354,7 +415,6 @@ export default function BuildDetailPage() {
                 className="text-primary cursor-pointer hover:underline"
                 data-testid="link-signin-to-save"
                 onClick={() => {
-                  // Dispatch a click on the sign-in button in the header
                   const btn = document.querySelector('[data-testid="button-login"]') as HTMLElement;
                   btn?.click();
                 }}

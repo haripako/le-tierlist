@@ -28,6 +28,7 @@ const HOOK_TEMPLATES = [
 // ─── Tier messaging ─────────────────────────────────────────────
 
 const TIER_MESSAGING: Record<string, { adjective: string; phrase: string; emoji: string }> = {
+  "S+": { adjective: "ABSOLUTE BEST", phrase: "literally broken", emoji: "✨" },
   S: { adjective: "META-DEFINING", phrase: "absolutely broken", emoji: "💎" },
   A: { adjective: "EXCELLENT", phrase: "a top pick", emoji: "⭐" },
   B: { adjective: "SOLID CHOICE", phrase: "reliable and strong", emoji: "✅" },
@@ -38,6 +39,7 @@ const TIER_MESSAGING: Record<string, { adjective: string; phrase: string; emoji:
 
 function getTierLabel(tier: string): string {
   switch (tier) {
+    case "S+": return "S+-tier";
     case "S": return "S-tier";
     case "A": return "A-tier";
     case "B": return "B-tier";
@@ -47,14 +49,15 @@ function getTierLabel(tier: string): string {
   }
 }
 
+/** Derive tier from the build's calculatedTier field (new system). */
 function getTierFromScore(upvotes: number, downvotes: number): string {
-  const score = upvotes - downvotes;
-  if (score <= 0) return "New";
-  if (score >= 400) return "S";
-  if (score >= 200) return "A";
-  if (score >= 100) return "B";
-  if (score >= 50) return "C";
-  return "D";
+  // Legacy fallback — now we use calculatedTier from builds directly
+  return "New";
+}
+
+function getTierForBuild(build: BuildWithSubmitter): string {
+  const ct = (build as any).calculatedTier;
+  return ct && ct !== "N" ? ct : "New";
 }
 
 // ─── Hook generator ─────────────────────────────────────────────
@@ -62,7 +65,7 @@ function getTierFromScore(upvotes: number, downvotes: number): string {
 function generateHook(build: BuildWithSubmitter, gameName: string, tier: string): string {
   const tierLabel = getTierLabel(tier);
   const tierMsg = TIER_MESSAGING[tier] ?? TIER_MESSAGING["New"];
-  const score = build.upvotes - build.downvotes;
+  const voteCount = (build as any).tierVoteCount ?? 0;
 
   const idx = (build.id ?? 0) % HOOK_TEMPLATES.length;
   const template = HOOK_TEMPLATES[idx];
@@ -73,8 +76,8 @@ function generateHook(build: BuildWithSubmitter, gameName: string, tier: string)
     .replace("{GAME}", gameName)
     .replace("{BUILD_NAME}", build.name)
     .replace("{TIER_LABEL}", tierLabel)
-    .replace("{SCORE}", score.toString())
-    .replace("{UPVOTES}", build.upvotes.toString());
+    .replace("{SCORE}", voteCount.toString())
+    .replace("{UPVOTES}", voteCount.toString());
 }
 
 // ─── Hashtag generators ─────────────────────────────────────────
@@ -170,7 +173,7 @@ function generateTwitterContent(
   hashtags: string,
 ): string {
   const tierLabel = getTierLabel(tier);
-  const score = build.upvotes - build.downvotes;
+  const voteCount = (build as any).tierVoteCount ?? 0;
   const masteryPart = build.mastery ? ` / ${build.mastery}` : "";
 
   // Extract top 2 pros
@@ -185,9 +188,8 @@ function generateTwitterContent(
 
   const content = `🏆 ${hookLine}
 
-${build.name} — ${tierLabel}
+${build.name} — Rated ${tierLabel} by ${voteCount} players
 🎮 ${gameName} | ${build.className}${masteryPart}${prosText}
-⬆️ ${build.upvotes} community votes
 
 Vote & see the full tier list: ${BUILDTIER_URL}
 
@@ -200,7 +202,7 @@ ${hashtags}`;
 
 ${build.name} — ${tierLabel}
 🎮 ${gameName} | ${build.className}
-⬆️ ${score} votes — ${BUILDTIER_URL}
+Rated by ${voteCount} players — ${BUILDTIER_URL}
 
 ${hashtags}`.slice(0, 280);
 }
@@ -216,7 +218,6 @@ function generateInstagramContent(
   const tierMsg = TIER_MESSAGING[tier] ?? TIER_MESSAGING["New"];
   const masteryPart = build.mastery ? ` / ${build.mastery}` : "";
   const skills = formatSkills(build.mainSkills);
-  const score = build.upvotes - build.downvotes;
   const descShort = build.description
     ? build.description.slice(0, 120) + (build.description.length > 120 ? "..." : "")
     : `A ${tierMsg.adjective.toLowerCase()} ${build.className} build for ${gameName}.`;
@@ -236,17 +237,18 @@ function generateInstagramContent(
     }
   } catch {}
 
+  const voteCount = (build as any).tierVoteCount ?? 0;
   return `${hookLine}
 
 ━━━━━━━━━━━━━━━
 🏆 ${build.name}
 🎮 ${gameName}
 ⚔️ ${build.className}${masteryPart}
-📊 Tier: ${tierLabel} (${score} votes)
+📊 Tier: ${tierLabel} (${voteCount} players voted)
 🔗 Guide: ${build.sourceType !== "other" ? build.sourceType : "Community"}
 ━━━━━━━━━━━━━━━
 
-The community has ranked this build ${tierLabel} with ${build.upvotes} upvotes.
+${voteCount > 0 ? `${voteCount} players agree: this build is ${tierLabel}!` : `Be one of the first to rate this build!`}
 
 📌 Main Skills: ${skills}
 💡 ${descShort}${prosConsText}
@@ -328,7 +330,7 @@ export function generateSocialPosts(
   gameName: string,
   tier?: string,
 ): GeneratedSocialPost[] {
-  const resolvedTier = tier ?? getTierFromScore(build.upvotes, build.downvotes);
+  const resolvedTier = tier ?? getTierForBuild(build);
   const tierLabel = getTierLabel(resolvedTier);
 
   const platforms = ["twitter", "instagram", "tiktok", "youtube_shorts"] as const;

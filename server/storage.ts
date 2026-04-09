@@ -1,5 +1,5 @@
 import {
-  games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes, socialPosts,
+  games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes, tierVotes, anonTierVotes, socialPosts,
   bookmarks, anonBookmarks, reports, categories,
   type Game, type InsertGame,
   type GameMode, type InsertGameMode,
@@ -8,6 +8,7 @@ import {
   type User, type InsertUser,
   type Build, type InsertBuild,
   type Vote, type InsertVote,
+  type TierVote, type AnonTierVote,
   type SocialPost, type InsertSocialPost,
   type BuildWithSubmitter,
   type Category, type InsertCategory,
@@ -105,11 +106,24 @@ export interface IStorage {
   getTrendingBuilds(): BuildWithSubmitter[];
   getViralBuilds(): BuildWithSubmitter[];
 
-  // Votes
+  // Votes (legacy)
   getVote(buildId: number, userId: number): Vote | undefined;
   castVote(buildId: number, userId: number, voteType: string): Vote;
   removeVote(buildId: number, userId: number): void;
   getUserVotes(userId: number): Vote[];
+
+  // Tier votes
+  getTierVote(buildId: number, userId: number): TierVote | undefined;
+  getAnonTierVote(buildId: number, voterHash: string): AnonTierVote | undefined;
+  castTierVote(buildId: number, userId: number, tierVote: string): TierVote;
+  castAnonTierVote(buildId: number, voterHash: string, tierVote: string): AnonTierVote;
+  removeTierVote(buildId: number, userId: number): void;
+  removeAnonTierVote(buildId: number, voterHash: string): void;
+  getUserTierVotes(userId: number): TierVote[];
+  getAnonTierVotes(voterHash: string): AnonTierVote[];
+  getVoteDistribution(buildId: number): Record<string, number>;
+  recalculateBuildTier(buildId: number): void;
+  migrateAnonTierVotes(voterHash: string, userId: number): void;
 
   // Bookmarks
   getBookmark(buildId: number, userId: number): Bookmark | undefined;
@@ -380,6 +394,8 @@ export class DatabaseStorage implements IStorage {
       gameIcon: game?.icon ?? "⚔️",
       gameColor: game?.color ?? "#d4a537",
       bookmarkCount: this.getBookmarkCountForBuild(build.id),
+      calculatedTier: build.calculatedTier ?? "N",
+      tierVoteCount: build.tierVoteCount ?? 0,
     };
   }
 
@@ -393,9 +409,9 @@ export class DatabaseStorage implements IStorage {
 
     let rows: Build[];
     if (conditions.length > 0) {
-      rows = db.select().from(builds).where(and(...conditions)).orderBy(desc(builds.upvotes)).all();
+      rows = db.select().from(builds).where(and(...conditions)).orderBy(desc(builds.createdAt)).all();
     } else {
-      rows = db.select().from(builds).orderBy(desc(builds.upvotes)).all();
+      rows = db.select().from(builds).orderBy(desc(builds.createdAt)).all();
     }
     return rows.map(b => this.enrichBuild(b));
   }
@@ -418,6 +434,8 @@ export class DatabaseStorage implements IStorage {
       socialShares: 0,
       isTrending: false,
       isViral: false,
+      calculatedTier: "N",
+      tierVoteCount: 0,
       createdAt: new Date().toISOString(),
     }).returning().get();
 
@@ -472,7 +490,7 @@ export class DatabaseStorage implements IStorage {
     return rows.map(b => this.enrichBuild(b));
   }
 
-  // ── Votes ──
+  // ── Votes (legacy) ──
 
   getVote(buildId: number, userId: number): Vote | undefined {
     return db.select().from(votes)
@@ -531,6 +549,105 @@ export class DatabaseStorage implements IStorage {
 
   getUserVotes(userId: number): Vote[] {
     return db.select().from(votes).where(eq(votes.userId, userId)).all();
+  }
+
+  // ── Tier Votes ──
+
+  getTierVote(buildId: number, userId: number): TierVote | undefined {
+    return db.select().from(tierVotes)
+      .where(and(eq(tierVotes.buildId, buildId), eq(tierVotes.userId, userId)))
+      .get();
+  }
+
+  getAnonTierVote(buildId: number, voterHash: string): AnonTierVote | undefined {
+    const row = db.all(sql`SELECT * FROM anon_tier_votes WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`) as any[];
+    return row[0] as AnonTierVote | undefined;
+  }
+
+  castTierVote(buildId: number, userId: number, tierVote: string): TierVote {
+    const existing = this.getTierVote(buildId, userId);
+    if (existing) {
+      db.run(sql`UPDATE tier_votes SET tier_vote = ${tierVote}, created_at = ${new Date().toISOString()} WHERE build_id = ${buildId} AND user_id = ${userId}`);
+    } else {
+      db.run(sql`INSERT INTO tier_votes (build_id, user_id, tier_vote, created_at) VALUES (${buildId}, ${userId}, ${tierVote}, ${new Date().toISOString()})`);
+    }
+    this.recalculateBuildTier(buildId);
+    return this.getTierVote(buildId, userId)!;
+  }
+
+  castAnonTierVote(buildId: number, voterHash: string, tierVote: string): AnonTierVote {
+    const existing = this.getAnonTierVote(buildId, voterHash);
+    if (existing) {
+      db.run(sql`UPDATE anon_tier_votes SET tier_vote = ${tierVote}, created_at = ${new Date().toISOString()} WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
+    } else {
+      db.run(sql`INSERT INTO anon_tier_votes (build_id, voter_hash, tier_vote, created_at) VALUES (${buildId}, ${voterHash}, ${tierVote}, ${new Date().toISOString()})`);
+    }
+    this.recalculateBuildTier(buildId);
+    return this.getAnonTierVote(buildId, voterHash)!;
+  }
+
+  removeTierVote(buildId: number, userId: number): void {
+    db.run(sql`DELETE FROM tier_votes WHERE build_id = ${buildId} AND user_id = ${userId}`);
+    this.recalculateBuildTier(buildId);
+  }
+
+  removeAnonTierVote(buildId: number, voterHash: string): void {
+    db.run(sql`DELETE FROM anon_tier_votes WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
+    this.recalculateBuildTier(buildId);
+  }
+
+  getUserTierVotes(userId: number): TierVote[] {
+    return db.select().from(tierVotes).where(eq(tierVotes.userId, userId)).all();
+  }
+
+  getAnonTierVotes(voterHash: string): AnonTierVote[] {
+    return db.all(sql`SELECT * FROM anon_tier_votes WHERE voter_hash = ${voterHash}`) as AnonTierVote[];
+  }
+
+  getVoteDistribution(buildId: number): Record<string, number> {
+    const dist: Record<string, number> = { "S+": 0, "S": 0, "A": 0, "B": 0, "C": 0, "D": 0 };
+    const userRows = db.all(sql`SELECT tier_vote, count(*) as c FROM tier_votes WHERE build_id = ${buildId} GROUP BY tier_vote`) as any[];
+    const anonRows = db.all(sql`SELECT tier_vote, count(*) as c FROM anon_tier_votes WHERE build_id = ${buildId} GROUP BY tier_vote`) as any[];
+    for (const r of [...userRows, ...anonRows]) {
+      if (dist[r.tier_vote] !== undefined) dist[r.tier_vote] += r.c;
+    }
+    return dist;
+  }
+
+  recalculateBuildTier(buildId: number): void {
+    const TIER_VALUES: Record<string, number> = { "S+": 6, "S": 5, "A": 4, "B": 3, "C": 2, "D": 1 };
+    const TIER_BY_VALUE: Record<number, string> = { 6: "S+", 5: "S", 4: "A", 3: "B", 2: "C", 1: "D" };
+
+    const userRows = db.all(sql`SELECT tier_vote FROM tier_votes WHERE build_id = ${buildId}`) as any[];
+    const anonRows = db.all(sql`SELECT tier_vote FROM anon_tier_votes WHERE build_id = ${buildId}`) as any[];
+    const allVotes = [...userRows, ...anonRows].map(r => r.tier_vote as string);
+
+    const total = allVotes.length;
+
+    if (total === 0) {
+      db.run(sql`UPDATE builds SET calculated_tier = 'N', tier_vote_count = 0 WHERE id = ${buildId}`);
+      return;
+    }
+
+    const values = allVotes.map(v => TIER_VALUES[v] ?? 3).sort((a, b) => a - b);
+    const mid = Math.floor(values.length / 2);
+    const medianValue = values.length % 2 === 0
+      ? Math.round((values[mid - 1] + values[mid]) / 2)
+      : values[mid];
+    const medianTier = TIER_BY_VALUE[medianValue] ?? "B";
+
+    db.run(sql`UPDATE builds SET calculated_tier = ${medianTier}, tier_vote_count = ${total} WHERE id = ${buildId}`);
+  }
+
+  migrateAnonTierVotes(voterHash: string, userId: number): void {
+    const anonRows = this.getAnonTierVotes(voterHash);
+    for (const row of anonRows) {
+      const existing = this.getTierVote(row.buildId, userId);
+      if (!existing) {
+        db.run(sql`INSERT INTO tier_votes (build_id, user_id, tier_vote, created_at) VALUES (${row.buildId}, ${userId}, ${row.tierVote}, ${new Date().toISOString()})`);
+      }
+    }
+    db.run(sql`DELETE FROM anon_tier_votes WHERE voter_hash = ${voterHash}`);
   }
 
   // ── Bookmarks ──

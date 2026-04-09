@@ -107,10 +107,12 @@ export const builds = sqliteTable("builds", {
   difficulty: text("difficulty"), // beginner | intermediate | advanced | expert
   budgetLevel: text("budget_level"), // budget | mid-range | expensive | endgame
   thumbnailUrl: text("thumbnail_url"),  // extracted og:image or YouTube thumbnail
+  calculatedTier: text("calculated_tier").notNull().default("N"), // computed median tier from votes
+  tierVoteCount: integer("tier_vote_count").notNull().default(0), // total tier votes received
   createdAt: text("created_at").notNull(),
 });
 
-// ─── Votes ────────────────────────────────────────────────────
+// ─── Votes (legacy — kept for DB compatibility) ──────────────
 export const votes = sqliteTable("votes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   buildId: integer("build_id").notNull(),
@@ -119,12 +121,30 @@ export const votes = sqliteTable("votes", {
   createdAt: text("created_at").notNull(),
 });
 
-// ─── Anonymous votes ──────────────────────────────────────────
+// ─── Anonymous votes (legacy) ─────────────────────────────────
 export const anonVotes = sqliteTable("anon_votes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   buildId: integer("build_id").notNull(),
   voterHash: text("voter_hash").notNull(),
   voteType: text("vote_type").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ─── Tier votes (registered users) ───────────────────────────
+export const tierVotes = sqliteTable("tier_votes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  buildId: integer("build_id").notNull(),
+  userId: integer("user_id").notNull(),
+  tierVote: text("tier_vote").notNull(), // 'S+', 'S', 'A', 'B', 'C', 'D'
+  createdAt: text("created_at").notNull(),
+});
+
+// ─── Anon tier votes ──────────────────────────────────────────
+export const anonTierVotes = sqliteTable("anon_tier_votes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  buildId: integer("build_id").notNull(),
+  voterHash: text("voter_hash").notNull(),
+  tierVote: text("tier_vote").notNull(),
   createdAt: text("created_at").notNull(),
 });
 
@@ -185,6 +205,7 @@ export const insertBuildSchema = createInsertSchema(builds).omit({
   id: true, upvotes: true, downvotes: true, createdAt: true, sourceType: true,
   views: true, socialScore: true, socialViews: true, socialShares: true,
   isTrending: true, isViral: true, trendingReason: true,
+  calculatedTier: true, tierVoteCount: true,
 }).extend({
   description: z.string().default(""),
   mainSkills: z.string().default("[]"),
@@ -206,6 +227,21 @@ export const insertVoteSchema = createInsertSchema(votes).omit({
   id: true, createdAt: true,
 });
 
+export const TIER_OPTIONS = ["S+", "S", "A", "B", "C", "D"] as const;
+export type TierOption = (typeof TIER_OPTIONS)[number];
+
+export const insertTierVoteSchema = createInsertSchema(tierVotes).omit({
+  id: true, createdAt: true,
+}).extend({
+  tierVote: z.enum(["S+", "S", "A", "B", "C", "D"]),
+});
+
+export const insertAnonTierVoteSchema = createInsertSchema(anonTierVotes).omit({
+  id: true, createdAt: true,
+}).extend({
+  tierVote: z.enum(["S+", "S", "A", "B", "C", "D"]),
+});
+
 // ─── Types ────────────────────────────────────────────────────
 
 export type Category = typeof categories.$inferSelect;
@@ -224,6 +260,10 @@ export type Build = typeof builds.$inferSelect;
 export type InsertBuild = z.infer<typeof insertBuildSchema>;
 export type Vote = typeof votes.$inferSelect;
 export type InsertVote = z.infer<typeof insertVoteSchema>;
+export type TierVote = typeof tierVotes.$inferSelect;
+export type InsertTierVote = z.infer<typeof insertTierVoteSchema>;
+export type AnonTierVote = typeof anonTierVotes.$inferSelect;
+export type InsertAnonTierVote = z.infer<typeof insertAnonTierVoteSchema>;
 export type Bookmark = typeof bookmarks.$inferSelect;
 export type AnonBookmark = typeof anonBookmarks.$inferSelect;
 export type Report = typeof reports.$inferSelect;
@@ -242,6 +282,8 @@ export type BuildWithSubmitter = Build & {
   gameIcon: string;
   gameColor: string;
   bookmarkCount: number;
+  calculatedTier: string;
+  tierVoteCount: number;
 };
 
 export type GameWithMeta = Game & {

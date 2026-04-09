@@ -82,7 +82,7 @@ export default function GamePage() {
           <Skeleton className="h-9 w-44" />
         </div>
         <div className="space-y-6">
-          {["S", "A", "B"].map(t => (
+          {["S+", "S", "A", "B"].map(t => (
             <div key={t} className="space-y-3">
               <Skeleton className="h-8 w-32" />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -310,7 +310,7 @@ export default function GamePage() {
       {/* Tier List */}
       {viewMode === "tier-list" && tierLoading ? (
         <div className="space-y-6">
-          {["S", "A", "B", "C", "D", "N"].map(tier => (
+          {["S+", "S", "A", "B", "C", "D", "N"].map(tier => (
             <div key={tier} className="space-y-3">
               <Skeleton className="h-8 w-32" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -321,16 +321,16 @@ export default function GamePage() {
         </div>
       ) : viewMode === "tier-list" && filteredTierList ? (
         <div className="space-y-6">
-          {(["S", "A", "B", "C", "D", "N"] as const).map(tier => {
+          {(["S+", "S", "A", "B", "C", "D", "N"] as Array<keyof typeof TIER_CONFIG>).map(tier => {
             const tierBuilds = (filteredTierList[tier] || []) as TierBuild[];
             const config = TIER_CONFIG[tier];
-            if (tierBuilds.length === 0) return null;
+            if (!config || tierBuilds.length === 0) return null;
 
             return (
               <div key={tier} className="space-y-3" data-testid={`tier-section-${tier}`}>
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${tier === 'N' ? 'bg-gray-500/20 text-gray-400' : 'text-white ' + config.bgAccent}`}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${tier === 'N' ? 'bg-gray-500/20 text-gray-400' : tier === 'S+' ? 'bg-yellow-400/20 text-yellow-300' : 'text-white ' + config.bgAccent}`}
                     style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}
                   >
                     {config.label}
