@@ -7,12 +7,24 @@ import { sql } from "drizzle-orm";
 import { extractBuildFromUrl } from "./extract";
 import crypto from "crypto";
 
-// ─── Voter hash helper ─────────────────────────────────────────
+// ─── Voter identity (cookie-based, stable across requests) ─────
 
-function getVoterHash(req: any): string {
-  const ip = req.headers["x-forwarded-for"] || req.ip || "unknown";
-  const ua = req.headers["user-agent"] || "";
-  return crypto.createHash("sha256").update(`${ip}:${ua}`).digest("hex").slice(0, 32);
+function getVoterHash(req: any, res?: any): string {
+  // Read voter_id from cookie — if missing, generate a new one and set it
+  let voterId = req.cookies?.voter_id;
+  if (!voterId) {
+    voterId = crypto.randomUUID().replace(/-/g, "");
+    if (res) {
+      res.cookie("voter_id", voterId, {
+        httpOnly: true,
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+    }
+  }
+  return voterId;
 }
 
 // ─── DB init ───────────────────────────────────────────────────
@@ -467,7 +479,7 @@ export async function registerRoutes(server: Server, app: Express) {
   });
 
   app.post("/api/builds", (req, res) => {
-    const voterHash = getVoterHash(req);
+    const voterHash = getVoterHash(req, res);
     let submitterId = req.body.submitterId;
     let isAnon = false;
 
@@ -533,7 +545,7 @@ export async function registerRoutes(server: Server, app: Express) {
     const build = storage.getBuild(buildId);
     if (!build) return res.status(404).json({ error: "Build not found" });
 
-    const voterHash = getVoterHash(req);
+    const voterHash = getVoterHash(req, res);
     const existing = db.all(sql`SELECT * FROM anon_votes WHERE build_id = ${buildId} AND voter_hash = ${voterHash}`);
     const existingVote = existing[0] as any;
 
@@ -585,7 +597,7 @@ export async function registerRoutes(server: Server, app: Express) {
   });
 
   app.get("/api/voter-hash", (req, res) => {
-    res.json({ voterHash: getVoterHash(req) });
+    res.json({ voterHash: getVoterHash(req, res) });
   });
 
   // ── Auth ──
@@ -600,7 +612,7 @@ export async function registerRoutes(server: Server, app: Express) {
     }
     const user = storage.createUser({ username, passwordHash: password });
 
-    const voterHash = getVoterHash(req);
+    const voterHash = getVoterHash(req, res);
     const anonBuilds = db.all(sql`SELECT id FROM builds WHERE anon_hash = ${voterHash}`);
     if (anonBuilds.length > 0) {
       db.run(sql`UPDATE builds SET submitter_id = ${user.id}, anon_hash = NULL WHERE anon_hash = ${voterHash}`);
@@ -627,7 +639,7 @@ export async function registerRoutes(server: Server, app: Express) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const voterHash = getVoterHash(req);
+    const voterHash = getVoterHash(req, res);
     const anonBuilds = db.all(sql`SELECT id FROM builds WHERE anon_hash = ${voterHash}`);
     if (anonBuilds.length > 0) {
       db.run(sql`UPDATE builds SET submitter_id = ${user.id}, anon_hash = NULL WHERE anon_hash = ${voterHash}`);
