@@ -15,8 +15,19 @@ export const games = sqliteTable("games", {
   icon: text("icon").notNull().default("⚔️"),
   category: text("category").notNull().default("arpg"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  hasSeasons: integer("has_seasons", { mode: "boolean" }).notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: text("created_at").notNull(),
+});
+
+// ─── Game modes table ──────────────────────────────────────────
+export const gameModes = sqliteTable("game_modes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  gameId: integer("game_id").notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
 });
 
 // ─── Game classes table ────────────────────────────────────────
@@ -51,16 +62,16 @@ export const users = sqliteTable("users", {
   createdAt: text("created_at").notNull(),
 });
 
-// ─── Builds table (updated — multi-game) ──────────────────────
+// ─── Builds table (updated — gameModeId replaces gameMode string) ──
 export const builds = sqliteTable("builds", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   gameId: integer("game_id").notNull(),
   gameClassId: integer("game_class_id"), // nullable FK → game_classes.id
   seasonId: integer("season_id"),        // nullable FK → seasons.id
+  gameModeId: integer("game_mode_id"),   // nullable FK → game_modes.id
   name: text("name").notNull(),
   className: text("class_name").notNull(),
   mastery: text("mastery").notNull().default(""),
-  gameMode: text("game_mode").notNull().default("softcore"),
   playstyle: text("playstyle").notNull(),
   description: text("description").notNull().default(""),
   mainSkills: text("main_skills").notNull().default("[]"),
@@ -97,6 +108,10 @@ export const insertGameSchema = createInsertSchema(games).omit({
   id: true, createdAt: true,
 });
 
+export const insertGameModeSchema = createInsertSchema(gameModes).omit({
+  id: true,
+});
+
 export const insertGameClassSchema = createInsertSchema(gameClasses).omit({
   id: true,
 }).extend({
@@ -119,6 +134,7 @@ export const insertBuildSchema = createInsertSchema(builds).omit({
   submitterId: z.number().nullable().default(null),
   gameClassId: z.number().nullable().default(null),
   seasonId: z.number().nullable().default(null),
+  gameModeId: z.number().nullable().default(null),
   mastery: z.string().default(""),
   anonHash: z.string().nullable().default(null),
 });
@@ -131,6 +147,8 @@ export const insertVoteSchema = createInsertSchema(votes).omit({
 
 export type Game = typeof games.$inferSelect;
 export type InsertGame = z.infer<typeof insertGameSchema>;
+export type GameMode = typeof gameModes.$inferSelect;
+export type InsertGameMode = z.infer<typeof insertGameModeSchema>;
 export type GameClass = typeof gameClasses.$inferSelect;
 export type InsertGameClass = z.infer<typeof insertGameClassSchema>;
 export type Season = typeof seasons.$inferSelect;
@@ -148,6 +166,8 @@ export type BuildWithSubmitter = Build & {
   submitterKarma: number;
   seasonSlug: string | null;
   seasonName: string | null;
+  gameModeName: string | null;
+  gameModeSlug: string | null;
   gameName: string;
   gameSlug: string;
   gameIcon: string;
@@ -158,6 +178,7 @@ export type GameWithMeta = Game & {
   buildCount: number;
   classes: GameClass[];
   activeSeasons: Season[];
+  modes: GameMode[];
 };
 
 // ─── Static source config ─────────────────────────────────────
@@ -168,5 +189,13 @@ export const BUILD_SOURCES = [
   { id: "youtube_short", name: "YouTube", domain: "youtu.be", icon: "▶️" },
   { id: "mobalytics", name: "Mobalytics", domain: "mobalytics.gg", icon: "📈" },
   { id: "reddit", name: "Reddit", domain: "reddit.com", icon: "💬" },
+  { id: "icy-veins", name: "Icy Veins", domain: "icy-veins.com", icon: "❄️" },
+  { id: "fextralife", name: "Fextralife", domain: "fextralife.com", icon: "📖" },
+  { id: "game8", name: "Game8", domain: "game8.co", icon: "🎮" },
+  { id: "poe-ninja", name: "PoE Ninja", domain: "poe.ninja", icon: "🥷" },
+  { id: "poebuilds", name: "PoE Builds", domain: "poebuilds.net", icon: "🔥" },
+  { id: "poewiki", name: "PoE Wiki", domain: "poewiki.net", icon: "📚" },
+  { id: "builds-gg", name: "Builds.gg", domain: "builds.gg", icon: "🏗️" },
+  { id: "hacktheminotaur", name: "HackTheMinotaur", domain: "hacktheminotaur.com", icon: "🐂" },
   { id: "other", name: "Other", domain: "", icon: "🔗" },
 ] as const;

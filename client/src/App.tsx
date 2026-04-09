@@ -8,8 +8,13 @@ import GamePage from "./pages/game";
 import SubmitBuildPage from "./pages/submit-build";
 import BuildDetailPage from "./pages/build-detail";
 import UserProfilePage from "./pages/user-profile";
-import AdminSeasonsPage from "./pages/admin-seasons";
+import AdminDashboardPage from "./pages/admin-dashboard";
 import AdminGamesPage from "./pages/admin-games";
+import AdminGameModesPage from "./pages/admin-game-modes";
+import AdminClassesPage from "./pages/admin-classes";
+import AdminSeasonsPage from "./pages/admin-seasons";
+import AdminBuildsPage from "./pages/admin-builds";
+import AdminUsersPage from "./pages/admin-users";
 import NotFound from "./pages/not-found";
 import Header from "./components/header";
 
@@ -24,8 +29,13 @@ function AppRouter() {
           <Route path="/submit" component={SubmitBuildPage} />
           <Route path="/build/:id" component={BuildDetailPage} />
           <Route path="/user/:id" component={UserProfilePage} />
-          <Route path="/admin/seasons" component={AdminSeasonsPage} />
+          <Route path="/admin" component={AdminDashboardPage} />
           <Route path="/admin/games" component={AdminGamesPage} />
+          <Route path="/admin/game-modes" component={AdminGameModesPage} />
+          <Route path="/admin/classes" component={AdminClassesPage} />
+          <Route path="/admin/seasons" component={AdminSeasonsPage} />
+          <Route path="/admin/builds" component={AdminBuildsPage} />
+          <Route path="/admin/users" component={AdminUsersPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { GAME_MODES, PLAYSTYLES, SOURCE_CONFIG } from "@/lib/constants";
+import { PLAYSTYLES, SOURCE_CONFIG, detectSourceClient } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Send, ExternalLink, Loader2, Sparkles, ChevronRight, Link as LinkIcon, ArrowLeft, Gamepad2 } from "lucide-react";
-import type { GameWithMeta, GameClass, Season } from "@shared/schema";
+import type { GameWithMeta, GameClass, Season, GameMode } from "@shared/schema";
 
 type ExtractedBuild = {
   name: string;
@@ -23,18 +23,6 @@ type ExtractedBuild = {
   sourceType: string;
   confidence: "high" | "medium" | "low";
 };
-
-function detectSourceClient(url: string): string {
-  try {
-    const hostname = new URL(url).hostname.replace("www.", "");
-    if (hostname.includes("lastepochtools.com")) return "lastepochtools";
-    if (hostname.includes("maxroll.gg")) return "maxroll";
-    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "youtube";
-    if (hostname.includes("mobalytics.gg")) return "mobalytics";
-    if (hostname.includes("reddit.com")) return "reddit";
-    return "other";
-  } catch { return "other"; }
-}
 
 export default function SubmitBuildPage() {
   const [, navigate] = useLocation();
@@ -63,7 +51,7 @@ export default function SubmitBuildPage() {
   const [className, setClassName] = useState("");
   const [mastery, setMastery] = useState("");
   const [seasonId, setSeasonId] = useState("");
-  const [gameMode, setGameMode] = useState("softcore");
+  const [gameModeId, setGameModeId] = useState("");
   const [playstyle, setPlaystyle] = useState("");
   const [description, setDescription] = useState("");
   const [mainSkills, setMainSkills] = useState("");
@@ -75,7 +63,7 @@ export default function SubmitBuildPage() {
     queryFn: async () => { const res = await apiRequest("GET", "/api/games"); return res.json(); },
   });
 
-  // Fetch selected game info (classes + seasons)
+  // Fetch selected game info (classes + seasons + modes)
   const { data: selectedGame } = useQuery<GameWithMeta>({
     queryKey: ["/api/games", selectedGameSlug],
     queryFn: async () => { const res = await apiRequest("GET", `/api/games/${selectedGameSlug}`); return res.json(); },
@@ -84,6 +72,7 @@ export default function SubmitBuildPage() {
 
   const classes: GameClass[] = selectedGame?.classes ?? [];
   const activeSeasons: Season[] = selectedGame?.activeSeasons ?? [];
+  const gameModes: GameMode[] = selectedGame?.modes ?? [];
   const selectedClassObj = classes.find(c => c.name === className);
   const availableMasteries: string[] = selectedClassObj
     ? (() => { try { return JSON.parse(selectedClassObj.masteries); } catch { return []; } })()
@@ -96,11 +85,18 @@ export default function SubmitBuildPage() {
     try { new URL(guideUrl); return true; } catch { return false; }
   }, [guideUrl]);
 
-  // Set default game mode based on selected game category
+  // Set default game mode to first mode's ID
   useEffect(() => {
-    if (selectedGame?.category !== "arpg") setGameMode("default");
-    else setGameMode("softcore");
-  }, [selectedGame?.category]);
+    if (gameModes.length > 0 && !gameModeId) {
+      const defaultMode = gameModes.find(m => m.isDefault) ?? gameModes[0];
+      setGameModeId(String(defaultMode.id));
+    }
+  }, [gameModes]);
+
+  // Reset game mode when game changes
+  useEffect(() => {
+    setGameModeId("");
+  }, [selectedGameSlug]);
 
   // Auto-set season if only one active
   useEffect(() => {
@@ -140,7 +136,7 @@ export default function SubmitBuildPage() {
         className,
         mastery,
         seasonId: seasonId ? parseInt(seasonId) : null,
-        gameMode,
+        gameModeId: gameModeId ? parseInt(gameModeId) : null,
         playstyle,
         description,
         mainSkills: JSON.stringify(skillsArray),
@@ -161,7 +157,7 @@ export default function SubmitBuildPage() {
     },
   });
 
-  const isValid = name && className && gameMode && playstyle && guideUrl && selectedGame;
+  const isValid = name && className && gameModeId && playstyle && guideUrl && selectedGame;
 
   const CATEGORY_ORDER = ["arpg", "looter-shooter", "mmo", "other"];
   const grouped: Record<string, GameWithMeta[]> = {};
@@ -171,9 +167,6 @@ export default function SubmitBuildPage() {
   }
 
   const categoryLabels: Record<string, string> = { arpg: "ARPG", "looter-shooter": "Looter-Shooter", mmo: "MMO", other: "Other" };
-  const gameModes = selectedGame?.category === "arpg"
-    ? GAME_MODES.filter(m => m.id !== "default")
-    : selectedGame ? [GAME_MODES.find(m => m.id === "default")!] : GAME_MODES;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -261,7 +254,7 @@ export default function SubmitBuildPage() {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground">Supported: YouTube, Maxroll, Last Epoch Tools, Mobalytics, Reddit, or any URL</p>
+            <p className="text-[11px] text-muted-foreground">Supported: YouTube, Maxroll, Icy Veins, Mobalytics, Fextralife, Reddit, and more</p>
           </div>
 
           <Button onClick={handleExtract} disabled={!isValidUrl || isExtracting} className="w-full h-11" data-testid="button-extract">
@@ -346,7 +339,8 @@ export default function SubmitBuildPage() {
 
           {/* Season + Game Mode */}
           <div className="grid grid-cols-2 gap-3">
-            {activeSeasons.length > 0 && (
+            {/* Season selector — only for games with hasSeasons */}
+            {selectedGame?.hasSeasons && activeSeasons.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Season</Label>
                 <Select value={seasonId} onValueChange={setSeasonId}>
@@ -354,19 +348,24 @@ export default function SubmitBuildPage() {
                     <SelectValue placeholder="Season" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">No season</SelectItem>
                     {activeSeasons.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             )}
+            {/* Game Mode selector — dynamic per game */}
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Game Mode *</Label>
-              <Select value={gameMode} onValueChange={setGameMode}>
+              <Select value={gameModeId} onValueChange={setGameModeId}>
                 <SelectTrigger data-testid="select-game-mode">
-                  <SelectValue placeholder="Mode" />
+                  <SelectValue placeholder="Select mode" />
                 </SelectTrigger>
                 <SelectContent>
-                  {gameModes.map(m => m && <SelectItem key={m.id} value={m.id}>{m.icon} {m.name}</SelectItem>)}
+                  {gameModes.length > 0
+                    ? gameModes.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>)
+                    : <SelectItem value="default">Default</SelectItem>
+                  }
                 </SelectContent>
               </Select>
             </div>

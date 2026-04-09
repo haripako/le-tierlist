@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { GAME_MODES, TIER_CONFIG } from "@/lib/constants";
+import { TIER_CONFIG } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import BuildCard from "@/components/build-card";
 import { Plus, ArrowLeft } from "lucide-react";
-import type { GameWithMeta, BuildWithSubmitter, Season, GameClass } from "@shared/schema";
+import type { GameWithMeta, BuildWithSubmitter, GameMode } from "@shared/schema";
 
 type TierBuild = BuildWithSubmitter & { score: number; ratio: number; tier: string };
 type TierListResponse = Record<string, TierBuild[]>;
@@ -19,7 +19,7 @@ export default function GamePage() {
   const gameSlug = params?.slug ?? "";
 
   const [seasonId, setSeasonId] = useState<string>("all");
-  const [gameMode, setGameMode] = useState<string>("softcore");
+  const [gameModeId, setGameModeId] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
 
   // Fetch game info
@@ -35,11 +35,12 @@ export default function GamePage() {
 
   // Fetch tier list for this game
   const { data: tierList, isLoading: tierLoading } = useQuery<TierListResponse>({
-    queryKey: ["/api/games", gameSlug, "tier-list", seasonId, gameMode],
+    queryKey: ["/api/games", gameSlug, "tier-list", seasonId, gameModeId],
     queryFn: async () => {
-      const params = new URLSearchParams({ gameMode });
-      if (seasonId && seasonId !== "all") params.set("seasonId", seasonId);
-      const res = await apiRequest("GET", `/api/games/${gameSlug}/tier-list?${params}`);
+      const queryParams = new URLSearchParams();
+      if (gameModeId && gameModeId !== "all") queryParams.set("gameModeId", gameModeId);
+      if (seasonId && seasonId !== "all") queryParams.set("seasonId", seasonId);
+      const res = await apiRequest("GET", `/api/games/${gameSlug}/tier-list?${queryParams}`);
       return res.json();
     },
     enabled: !!gameSlug,
@@ -47,6 +48,7 @@ export default function GamePage() {
 
   const activeSeasons = game?.activeSeasons ?? [];
   const classes = game?.classes ?? [];
+  const modes: GameMode[] = game?.modes ?? [];
 
   // Apply class filter
   const filteredTierList = tierList
@@ -58,13 +60,7 @@ export default function GamePage() {
       )
     : null;
 
-  const isLoading = gameLoading || tierLoading;
   const hasBuilds = filteredTierList && Object.values(filteredTierList).some(arr => arr.length > 0);
-
-  // Determine which game modes apply (arpg/looter-shooter use SC/HC, others use Default)
-  const applicableModes = game?.category === "arpg"
-    ? GAME_MODES.filter(m => m.id !== "default")
-    : GAME_MODES;
 
   if (gameLoading) {
     return (
@@ -139,6 +135,7 @@ export default function GamePage() {
             <p className="text-sm text-muted-foreground mt-0.5">
               Community tier list · {classes.length} classes
               {activeSeasons.length > 0 && ` · ${activeSeasons.length} active seasons`}
+              {modes.length > 0 && ` · ${modes.length} modes`}
             </p>
           </div>
           <Link href={`/submit?game=${game.slug}`}>
@@ -152,7 +149,8 @@ export default function GamePage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3" data-testid="filters-section">
-        {activeSeasons.length > 0 && (
+        {/* Season filter — only show if game has seasons */}
+        {game.hasSeasons && activeSeasons.length > 0 && (
           <Select value={seasonId} onValueChange={setSeasonId}>
             <SelectTrigger className="w-[240px] bg-card border-border" data-testid="select-season">
               <SelectValue placeholder="All Seasons" />
@@ -166,26 +164,28 @@ export default function GamePage() {
           </Select>
         )}
 
-        {/* Game mode toggle */}
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          <button
-            onClick={() => setGameMode("all")}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${gameMode === "all" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-            data-testid="button-mode-all"
-          >
-            All
-          </button>
-          {applicableModes.map(mode => (
+        {/* Game mode toggle — dynamic from API */}
+        {modes.length > 0 && (
+          <div className="flex rounded-lg border border-border overflow-hidden" data-testid="mode-toggle-group">
             <button
-              key={mode.id}
-              onClick={() => setGameMode(mode.id)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${gameMode === mode.id ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-              data-testid={`button-mode-${mode.id}`}
+              onClick={() => setGameModeId("all")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${gameModeId === "all" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              data-testid="button-mode-all"
             >
-              {mode.icon} {mode.name}
+              All
             </button>
-          ))}
-        </div>
+            {modes.map(mode => (
+              <button
+                key={mode.id}
+                onClick={() => setGameModeId(String(mode.id))}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${gameModeId === String(mode.id) ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                data-testid={`button-mode-${mode.slug}`}
+              >
+                {mode.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Class filter */}
         {classes.length > 0 && (
@@ -245,7 +245,7 @@ export default function GamePage() {
                       build={build}
                       tier={tier}
                       gameSlug={gameSlug}
-                      invalidateKey={["/api/games", gameSlug, "tier-list", seasonId, gameMode]}
+                      invalidateKey={["/api/games", gameSlug, "tier-list", seasonId, gameModeId]}
                     />
                   ))}
                 </div>

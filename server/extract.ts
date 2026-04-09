@@ -203,6 +203,14 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
   else if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) sourceType = "youtube";
   else if (hostname.includes("mobalytics.gg")) sourceType = "mobalytics";
   else if (hostname.includes("reddit.com")) sourceType = "reddit";
+  else if (hostname.includes("icy-veins.com")) sourceType = "icy-veins";
+  else if (hostname.includes("fextralife.com")) sourceType = "fextralife";
+  else if (hostname.includes("game8.co")) sourceType = "game8";
+  else if (hostname.includes("poe.ninja")) sourceType = "poe-ninja";
+  else if (hostname.includes("poebuilds.net")) sourceType = "poebuilds";
+  else if (hostname.includes("poewiki.net")) sourceType = "poewiki";
+  else if (hostname.includes("builds.gg")) sourceType = "builds-gg";
+  else if (hostname.includes("hacktheminotaur.com")) sourceType = "hacktheminotaur";
 
   // Start with URL-based parsing (Maxroll has structured URLs)
   let urlParsed: Partial<ExtractedBuild> = {};

@@ -1,6 +1,7 @@
 import {
-  games, gameClasses, seasons, users, builds, votes, anonVotes,
+  games, gameModes, gameClasses, seasons, users, builds, votes, anonVotes,
   type Game, type InsertGame,
+  type GameMode, type InsertGameMode,
   type GameClass, type InsertGameClass,
   type Season, type InsertSeason,
   type User, type InsertUser,
@@ -44,6 +45,14 @@ export interface IStorage {
   updateGame(id: number, data: Partial<InsertGame>): Game | undefined;
   deleteGame(id: number): void;
 
+  // Game modes
+  getGameModes(gameId: number): GameMode[];
+  getGameMode(id: number): GameMode | undefined;
+  getDefaultGameMode(gameId: number): GameMode | undefined;
+  createGameMode(mode: InsertGameMode): GameMode;
+  updateGameMode(id: number, data: Partial<InsertGameMode>): GameMode | undefined;
+  deleteGameMode(id: number): void;
+
   // Game classes
   getGameClasses(gameId: number): GameClass[];
   getGameClass(id: number): GameClass | undefined;
@@ -67,12 +76,14 @@ export interface IStorage {
   getUserById(id: number): User | undefined;
   updateKarma(userId: number, delta: number): void;
   getTopUsers(limit?: number): User[];
+  getAllUsers(): User[];
 
   // Builds
-  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[];
+  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameModeId?: number; className?: string; mastery?: string }): BuildWithSubmitter[];
   getBuild(id: number): BuildWithSubmitter | undefined;
   createBuild(build: InsertBuild): Build;
   getUserBuilds(userId: number): BuildWithSubmitter[];
+  deleteBuild(id: number): void;
 
   // Votes
   getVote(buildId: number, userId: number): Vote | undefined;
@@ -113,6 +124,38 @@ export class DatabaseStorage implements IStorage {
 
   deleteGame(id: number): void {
     db.update(games).set({ isActive: false }).where(eq(games.id, id)).run();
+  }
+
+  // ── Game modes ──
+
+  getGameModes(gameId: number): GameMode[] {
+    return db.select().from(gameModes)
+      .where(eq(gameModes.gameId, gameId))
+      .orderBy(gameModes.sortOrder)
+      .all();
+  }
+
+  getGameMode(id: number): GameMode | undefined {
+    return db.select().from(gameModes).where(eq(gameModes.id, id)).get();
+  }
+
+  getDefaultGameMode(gameId: number): GameMode | undefined {
+    return db.select().from(gameModes)
+      .where(and(eq(gameModes.gameId, gameId), eq(gameModes.isDefault, true)))
+      .get();
+  }
+
+  createGameMode(mode: InsertGameMode): GameMode {
+    return db.insert(gameModes).values(mode).returning().get();
+  }
+
+  updateGameMode(id: number, data: Partial<InsertGameMode>): GameMode | undefined {
+    db.update(gameModes).set(data).where(eq(gameModes.id, id)).run();
+    return this.getGameMode(id);
+  }
+
+  deleteGameMode(id: number): void {
+    db.delete(gameModes).where(eq(gameModes.id, id)).run();
   }
 
   // ── Game classes ──
@@ -214,11 +257,16 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).orderBy(desc(users.karma)).limit(limit).all();
   }
 
+  getAllUsers(): User[] {
+    return db.select().from(users).orderBy(desc(users.karma)).all();
+  }
+
   // ── Builds ──
 
   private enrichBuild(build: Build): BuildWithSubmitter {
     const submitter = build.submitterId ? this.getUserById(build.submitterId) : undefined;
     const season = build.seasonId ? this.getSeason(build.seasonId) : undefined;
+    const gameMode = build.gameModeId ? this.getGameMode(build.gameModeId) : undefined;
     const game = this.getGame(build.gameId);
     return {
       ...build,
@@ -226,6 +274,8 @@ export class DatabaseStorage implements IStorage {
       submitterKarma: submitter?.karma ?? 0,
       seasonSlug: season?.slug ?? null,
       seasonName: season?.name ?? null,
+      gameModeName: gameMode?.name ?? null,
+      gameModeSlug: gameMode?.slug ?? null,
       gameName: game?.name ?? "Unknown",
       gameSlug: game?.slug ?? "",
       gameIcon: game?.icon ?? "⚔️",
@@ -233,11 +283,11 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameMode?: string; className?: string; mastery?: string }): BuildWithSubmitter[] {
+  getBuilds(filters?: { gameId?: number; seasonId?: number | null; gameModeId?: number; className?: string; mastery?: string }): BuildWithSubmitter[] {
     const conditions: any[] = [];
     if (filters?.gameId !== undefined) conditions.push(eq(builds.gameId, filters.gameId));
     if (filters?.seasonId !== undefined && filters.seasonId !== null) conditions.push(eq(builds.seasonId, filters.seasonId));
-    if (filters?.gameMode) conditions.push(eq(builds.gameMode, filters.gameMode));
+    if (filters?.gameModeId !== undefined) conditions.push(eq(builds.gameModeId, filters.gameModeId));
     if (filters?.className) conditions.push(eq(builds.className, filters.className));
     if (filters?.mastery) conditions.push(eq(builds.mastery, filters.mastery));
 
@@ -278,6 +328,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(builds.createdAt))
       .all();
     return rows.map(b => this.enrichBuild(b));
+  }
+
+  deleteBuild(id: number): void {
+    db.delete(builds).where(eq(builds.id, id)).run();
   }
 
   // ── Votes ──

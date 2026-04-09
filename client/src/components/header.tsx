@@ -98,18 +98,11 @@ export default function Header() {
                     </DropdownMenuItem>
                   </Link>
                   {isAdmin && (
-                    <>
-                      <Link href="/admin/games">
-                        <DropdownMenuItem data-testid="link-admin-games">
-                          <Shield className="w-3.5 h-3.5 mr-2" /> Manage Games
-                        </DropdownMenuItem>
-                      </Link>
-                      <Link href="/admin/seasons">
-                        <DropdownMenuItem data-testid="link-admin-seasons">
-                          <Shield className="w-3.5 h-3.5 mr-2" /> Manage Seasons
-                        </DropdownMenuItem>
-                      </Link>
-                    </>
+                    <Link href="/admin">
+                      <DropdownMenuItem data-testid="link-admin-dashboard">
+                        <Shield className="w-3.5 h-3.5 mr-2" /> Admin Dashboard
+                      </DropdownMenuItem>
+                    </Link>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} data-testid="button-logout">

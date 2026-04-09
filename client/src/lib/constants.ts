@@ -1,10 +1,3 @@
-// Game modes — apply to any game
-export const GAME_MODES = [
-  { id: "softcore", name: "Softcore", icon: "⚔️" },
-  { id: "hardcore", name: "Hardcore", icon: "💀" },
-  { id: "default", name: "Default", icon: "🎮" },
-] as const;
-
 // Playstyles — universal across games
 export const PLAYSTYLES = [
   { id: "melee", name: "Melee", icon: "🗡️" },
@@ -22,7 +15,7 @@ export const GAME_CATEGORIES = [
   { id: "other", name: "Other" },
 ] as const;
 
-// Source config for build guide links
+// Source config for build guide links — expanded with new sites
 export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: string }> = {
   lastepochtools: { name: "LE Tools", icon: "🔧", color: "text-yellow-400" },
   maxroll: { name: "Maxroll", icon: "📊", color: "text-blue-400" },
@@ -30,8 +23,37 @@ export const SOURCE_CONFIG: Record<string, { name: string; icon: string; color: 
   youtube_short: { name: "YouTube", icon: "▶️", color: "text-red-400" },
   mobalytics: { name: "Mobalytics", icon: "📈", color: "text-green-400" },
   reddit: { name: "Reddit", icon: "💬", color: "text-orange-400" },
+  "icy-veins": { name: "Icy Veins", icon: "❄️", color: "text-cyan-400" },
+  fextralife: { name: "Fextralife", icon: "📖", color: "text-purple-400" },
+  game8: { name: "Game8", icon: "🎮", color: "text-indigo-400" },
+  "poe-ninja": { name: "PoE Ninja", icon: "🥷", color: "text-yellow-300" },
+  poebuilds: { name: "PoE Builds", icon: "🔥", color: "text-orange-300" },
+  poewiki: { name: "PoE Wiki", icon: "📚", color: "text-gray-400" },
+  "builds-gg": { name: "Builds.gg", icon: "🏗️", color: "text-emerald-400" },
+  hacktheminotaur: { name: "HackTheMinotaur", icon: "🐂", color: "text-amber-400" },
   other: { name: "Link", icon: "🔗", color: "text-muted-foreground" },
 };
+
+// Client-side source detection helper
+export function detectSourceClient(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    if (hostname.includes("lastepochtools.com")) return "lastepochtools";
+    if (hostname.includes("maxroll.gg")) return "maxroll";
+    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "youtube";
+    if (hostname.includes("mobalytics.gg")) return "mobalytics";
+    if (hostname.includes("reddit.com")) return "reddit";
+    if (hostname.includes("icy-veins.com")) return "icy-veins";
+    if (hostname.includes("fextralife.com")) return "fextralife";
+    if (hostname.includes("game8.co")) return "game8";
+    if (hostname.includes("poe.ninja")) return "poe-ninja";
+    if (hostname.includes("poebuilds.net")) return "poebuilds";
+    if (hostname.includes("poewiki.net")) return "poewiki";
+    if (hostname.includes("builds.gg")) return "builds-gg";
+    if (hostname.includes("hacktheminotaur.com")) return "hacktheminotaur";
+    return "other";
+  } catch { return "other"; }
+}
 
 // Tier config — drives both build card styling and tier row styling
 export const TIER_CONFIG = {

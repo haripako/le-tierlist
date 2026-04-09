@@ -2,7 +2,7 @@ import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useVotes } from "@/hooks/use-votes";
-import { GAME_MODES, PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
+import { PLAYSTYLES, SOURCE_CONFIG, getKarmaColor, getKarmaTitle } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +35,7 @@ export default function BuildDetailPage() {
     );
   }
 
-  const mode = GAME_MODES.find(m => m.id === build.gameMode);
+  const modeName = build.gameModeName;
   const playstyle = PLAYSTYLES.find(p => p.id === build.playstyle);
   const source = SOURCE_CONFIG[build.sourceType] || SOURCE_CONFIG.other;
   const skills: string[] = (() => { try { return JSON.parse(build.mainSkills); } catch { return []; } })();
@@ -79,7 +79,7 @@ export default function BuildDetailPage() {
               {build.mastery && (
                 <Badge variant="outline" className="text-xs">{build.mastery}</Badge>
               )}
-              {mode && <Badge variant="secondary" className="text-xs">{mode.icon} {mode.name}</Badge>}
+              {modeName && <Badge variant="secondary" className="text-xs">🎮 {modeName}</Badge>}
               {playstyle && <Badge variant="secondary" className="text-xs">{playstyle.icon} {playstyle.name}</Badge>}
               {build.seasonName && (
                 <Badge variant="secondary" className="text-xs">🗓 {build.seasonName}</Badge>
