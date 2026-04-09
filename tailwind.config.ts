@@ -81,6 +81,13 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        tier: {
+          s: "hsl(var(--tier-s) / <alpha-value>)",
+          a: "hsl(var(--tier-a) / <alpha-value>)",
+          b: "hsl(var(--tier-b) / <alpha-value>)",
+          c: "hsl(var(--tier-c) / <alpha-value>)",
+          d: "hsl(var(--tier-d) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
