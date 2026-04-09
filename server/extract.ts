@@ -9,6 +9,11 @@ export interface ExtractedBuild {
   mainSkills: string[];
   sourceType: string;
   confidence: "high" | "medium" | "low";
+  pros: string[];
+  cons: string[];
+  engagementText: string;
+  difficulty: "beginner" | "intermediate" | "advanced" | "expert";
+  budgetLevel: "budget" | "mid-range" | "expensive" | "endgame";
 }
 
 // ─── Static LE class/mastery lookup (for URL extraction heuristics) ─
@@ -302,6 +307,50 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
     .replace(/&nbsp;/g, " ")
     .slice(0, 500);
 
+  // ─── Infer difficulty from text ───────────────────────────────
+  const fullText = `${bestTitle} ${cleanDescription}`.toLowerCase();
+  let difficulty: "beginner" | "intermediate" | "advanced" | "expert" = "intermediate";
+  if (/\b(beginner|starter|leveling|league starter|fresh|budget|easy|new player)\b/.test(fullText)) {
+    difficulty = "beginner";
+  } else if (/\b(endgame|push|1000\+?\s*corruption|pit 100|greater rift|expert|pinnacle|t4|high push)\b/.test(fullText)) {
+    difficulty = "expert";
+  } else if (/\b(advanced|complex|hard|optimize|bossing|end-game)\b/.test(fullText)) {
+    difficulty = "advanced";
+  }
+
+  // ─── Infer budget level from text ─────────────────────────────
+  let budgetLevel: "budget" | "mid-range" | "expensive" | "endgame" = "mid-range";
+  if (/\b(budget|cheap|starter|ssf|no currency|free|trade league|league start)\b/.test(fullText)) {
+    budgetLevel = "budget";
+  } else if (/\b(mirror|bis|best-in-slot|godroll|mirror-tier|headhunter|mageblood|chase unique|expensive endgame)\b/.test(fullText)) {
+    budgetLevel = "endgame";
+  } else if (/\b(expensive|investment|pricey|high cost|bis items|chase item)\b/.test(fullText)) {
+    budgetLevel = "expensive";
+  }
+
+  // ─── Generate generic pros/cons from playstyle ───────────────
+  const prosMap: Record<string, string[]> = {
+    melee: ["High sustained melee DPS", "Good tankiness from close range", "Strong AoE clear"],
+    ranged: ["Safe ranged playstyle", "Excellent kiting potential", "Good damage from range"],
+    caster: ["Excellent AoE spell coverage", "Strong crowd control", "High damage ceiling"],
+    summoner: ["Minions tank for you", "Very safe playstyle", "Strong passive damage"],
+    hybrid: ["Versatile damage types", "Flexible playstyle", "Good in all situations"],
+  };
+  const consMap: Record<string, string[]> = {
+    melee: ["Must be in melee range", "Vulnerable to ranged attacks"],
+    ranged: ["Lower damage in close range", "Movement intensive"],
+    caster: ["Can be squishy", "Mana/resource management"],
+    summoner: ["Minion management overhead", "Minions can die"],
+    hybrid: ["Complex gear requirements", "Higher skill floor"],
+  };
+  const pros = prosMap[playstyle] || prosMap.melee;
+  const cons = consMap[playstyle] || consMap.melee;
+
+  // ─── Generate engagement text from name + description ─────────
+  const engagementText = cleanDescription
+    ? `${cleanDescription.slice(0, 150).trim()} — check the full guide to see if this build fits your playstyle.`
+    : `${name} is a ${playstyle} build worth exploring. Read the full guide to understand its strengths.`;
+
   return {
     name,
     className,
@@ -311,5 +360,10 @@ export async function extractBuildFromUrl(url: string): Promise<ExtractedBuild> 
     mainSkills,
     sourceType,
     confidence,
+    pros,
+    cons,
+    engagementText,
+    difficulty,
+    budgetLevel,
   };
 }

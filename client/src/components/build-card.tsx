@@ -36,6 +36,24 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
   const bookmarkCount = build.bookmarkCount ?? 0;
   const socialScore = build.socialScore ?? 0;
 
+  // Parse rich content fields
+  const engagementText: string = (build as any).engagementText || "";
+  const difficulty: string = (build as any).difficulty || "";
+  const budgetLevel: string = (build as any).budgetLevel || "";
+
+  const difficultyBadge: Record<string, { label: string; cls: string }> = {
+    beginner: { label: "Beginner", cls: "bg-green-500/15 text-green-400 border border-green-500/30" },
+    intermediate: { label: "Intermediate", cls: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+    advanced: { label: "Advanced", cls: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
+    expert: { label: "Expert", cls: "bg-red-500/15 text-red-400 border border-red-500/30" },
+  };
+  const budgetBadge: Record<string, { label: string; cls: string }> = {
+    budget: { label: "Budget", cls: "bg-green-500/15 text-green-400 border border-green-500/30" },
+    "mid-range": { label: "Mid-Range", cls: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+    expensive: { label: "Expensive", cls: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
+    endgame: { label: "Endgame", cls: "bg-red-500/15 text-red-400 border border-red-500/30" },
+  };
+
   const handleReport = async () => {
     if (reportSent) return;
     try {
@@ -143,6 +161,29 @@ export default function BuildCard({ build, tier, gameSlug, invalidateKey }: Buil
             <span>{source.name}</span>
             <ExternalLink className="w-2.5 h-2.5" />
           </a>
+
+          {/* Engagement text teaser */}
+          {engagementText && (
+            <p className="text-[11px] text-muted-foreground italic truncate" data-testid={`text-engagement-${build.id}`}>
+              {engagementText}
+            </p>
+          )}
+
+          {/* Difficulty + Budget badges */}
+          {(difficulty || budgetLevel) && (
+            <div className="flex flex-wrap gap-1">
+              {difficulty && difficultyBadge[difficulty] && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${difficultyBadge[difficulty].cls}`} data-testid={`badge-difficulty-${build.id}`}>
+                  {difficultyBadge[difficulty].label}
+                </span>
+              )}
+              {budgetLevel && budgetBadge[budgetLevel] && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${budgetBadge[budgetLevel].cls}`} data-testid={`badge-budget-${build.id}`}>
+                  💰 {budgetBadge[budgetLevel].label}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Skills */}
           {skills.length > 0 && (

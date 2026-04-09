@@ -62,6 +62,7 @@ export const TIER_CONFIG = {
   B: { label: "B", color: "bg-tier-b/20 border-tier-b/40 text-tier-b", bgAccent: "bg-tier-b", textColor: "text-tier-b", description: "Good" },
   C: { label: "C", color: "bg-tier-c/20 border-tier-c/40 text-tier-c", bgAccent: "bg-tier-c", textColor: "text-tier-c", description: "Average" },
   D: { label: "D", color: "bg-tier-d/20 border-tier-d/40 text-tier-d", bgAccent: "bg-tier-d", textColor: "text-tier-d", description: "Below Average" },
+  N: { label: "N", color: "border-gray-500/30 bg-gray-500/5", bgAccent: "bg-gray-500", textColor: "text-gray-400", description: "New — Not Yet Ranked" },
 } as const;
 
 // Karma color helper

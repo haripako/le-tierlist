@@ -172,12 +172,21 @@ function generateTwitterContent(
   const tierLabel = getTierLabel(tier);
   const score = build.upvotes - build.downvotes;
   const masteryPart = build.mastery ? ` / ${build.mastery}` : "";
-  const sourceType = build.sourceType !== "other" ? build.sourceType : "Guide";
+
+  // Extract top 2 pros
+  let prosText = "";
+  try {
+    const prosArr: string[] = JSON.parse((build as any).pros || "[]");
+    if (prosArr.length > 0) {
+      prosText = `\n✅ ${prosArr[0]}`;
+      if (prosArr.length > 1) prosText += `\n✅ ${prosArr[1]}`;
+    }
+  } catch {}
 
   const content = `🏆 ${hookLine}
 
 ${build.name} — ${tierLabel}
-🎮 ${gameName} | ${build.className}${masteryPart}
+🎮 ${gameName} | ${build.className}${masteryPart}${prosText}
 ⬆️ ${build.upvotes} community votes
 
 Vote & see the full tier list: ${BUILDTIER_URL}
@@ -212,6 +221,21 @@ function generateInstagramContent(
     ? build.description.slice(0, 120) + (build.description.length > 120 ? "..." : "")
     : `A ${tierMsg.adjective.toLowerCase()} ${build.className} build for ${gameName}.`;
 
+  // Build pros/cons section
+  let prosConsText = "";
+  try {
+    const prosArr: string[] = JSON.parse((build as any).pros || "[]");
+    const consArr: string[] = JSON.parse((build as any).cons || "[]");
+    if (prosArr.length > 0) {
+      prosConsText += "\n\n✅ Strengths:";
+      prosArr.slice(0, 4).forEach(p => { prosConsText += `\n  • ${p}`; });
+    }
+    if (consArr.length > 0) {
+      prosConsText += "\n\n⚠️ Weaknesses:";
+      consArr.slice(0, 3).forEach(c => { prosConsText += `\n  • ${c}`; });
+    }
+  } catch {}
+
   return `${hookLine}
 
 ━━━━━━━━━━━━━━━
@@ -225,7 +249,7 @@ function generateInstagramContent(
 The community has ranked this build ${tierLabel} with ${build.upvotes} upvotes.
 
 📌 Main Skills: ${skills}
-💡 ${descShort}
+💡 ${descShort}${prosConsText}
 
 👉 Vote on BuildTier (link in bio)
 
@@ -243,11 +267,21 @@ function generateTikTokContent(
   const gameHashtag = getGameHashtag(gameName);
   const masteryPart = build.mastery ? ` ${build.mastery}` : "";
 
+  // Top 3 reasons to try this build
+  let top3 = "";
+  try {
+    const prosArr: string[] = JSON.parse((build as any).pros || "[]");
+    if (prosArr.length > 0) {
+      top3 = "\n\nTop 3 reasons to try this build:";
+      prosArr.slice(0, 3).forEach((p, i) => { top3 += `\n${i + 1}. ${p}`; });
+    }
+  } catch {}
+
   return `${hookLine} #${gameHashtag}
 
 Build: ${build.name}
 Class: ${build.className}${masteryPart}
-Tier: ${tierLabel} ⭐
+Tier: ${tierLabel} ⭐${top3}
 
 Link in bio for the full tier list 🔗
 

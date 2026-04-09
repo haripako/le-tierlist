@@ -41,6 +41,26 @@ export default function BuildDetailPage() {
   const skills: string[] = (() => { try { return JSON.parse(build.mainSkills); } catch { return []; } })();
   const score = build.upvotes - build.downvotes;
 
+  // Parse rich content
+  const pros: string[] = (() => { try { return JSON.parse((build as any).pros || "[]"); } catch { return []; } })();
+  const cons: string[] = (() => { try { return JSON.parse((build as any).cons || "[]"); } catch { return []; } })();
+  const engagementText: string = (build as any).engagementText || "";
+  const difficulty: string = (build as any).difficulty || "";
+  const budgetLevel: string = (build as any).budgetLevel || "";
+
+  const difficultyBadge: Record<string, { label: string; cls: string }> = {
+    beginner: { label: "Beginner", cls: "bg-green-500/15 text-green-400 border border-green-500/30" },
+    intermediate: { label: "Intermediate", cls: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+    advanced: { label: "Advanced", cls: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
+    expert: { label: "Expert", cls: "bg-red-500/15 text-red-400 border border-red-500/30" },
+  };
+  const budgetBadge: Record<string, { label: string; cls: string }> = {
+    budget: { label: "Budget", cls: "bg-green-500/15 text-green-400 border border-green-500/30" },
+    "mid-range": { label: "Mid-Range", cls: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+    expensive: { label: "Expensive", cls: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
+    endgame: { label: "Endgame", cls: "bg-red-500/15 text-red-400 border border-red-500/30" },
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Breadcrumb */}
@@ -138,10 +158,65 @@ export default function BuildDetailPage() {
           <ExternalLink className="w-4 h-4 shrink-0" />
         </a>
 
+        {/* Engagement text highlight */}
+        {engagementText && (
+          <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-3" data-testid="text-engagement-quote">
+            <p className="text-sm text-primary italic leading-relaxed">" {engagementText} "</p>
+          </div>
+        )}
+
+        {/* Difficulty + Budget badges */}
+        {(difficulty || budgetLevel) && (
+          <div className="flex flex-wrap gap-2">
+            {difficulty && difficultyBadge[difficulty] && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${difficultyBadge[difficulty].cls}`} data-testid="badge-difficulty">
+                🎯 {difficultyBadge[difficulty].label}
+              </span>
+            )}
+            {budgetLevel && budgetBadge[budgetLevel] && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${budgetBadge[budgetLevel].cls}`} data-testid="badge-budget">
+                💰 {budgetBadge[budgetLevel].label}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Description */}
         {build.description && (
           <div>
             <p className="text-sm text-muted-foreground leading-relaxed">{build.description}</p>
+          </div>
+        )}
+
+        {/* Pros & Cons */}
+        {(pros.length > 0 || cons.length > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {pros.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-green-400 mb-2">✅ Strengths</p>
+                <ul className="space-y-1.5">
+                  {pros.map((pro, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="text-green-400 mt-0.5 shrink-0">✓</span>
+                      <span>{pro}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {cons.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">⚠️ Weaknesses</p>
+                <ul className="space-y-1.5">
+                  {cons.map((con, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="text-amber-400 mt-0.5 shrink-0">⚠</span>
+                      <span>{con}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

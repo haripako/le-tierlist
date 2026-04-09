@@ -101,6 +101,11 @@ export const builds = sqliteTable("builds", {
   isTrending: integer("is_trending", { mode: "boolean" }).notNull().default(false),
   isViral: integer("is_viral", { mode: "boolean" }).notNull().default(false),
   trendingReason: text("trending_reason"),
+  pros: text("pros"),          // JSON array of strings
+  cons: text("cons"),          // JSON array of strings
+  engagementText: text("engagement_text"),
+  difficulty: text("difficulty"), // beginner | intermediate | advanced | expert
+  budgetLevel: text("budget_level"), // budget | mid-range | expensive | endgame
   createdAt: text("created_at").notNull(),
 });
 
@@ -188,6 +193,11 @@ export const insertBuildSchema = createInsertSchema(builds).omit({
   gameModeId: z.number().nullable().default(null),
   mastery: z.string().default(""),
   anonHash: z.string().nullable().default(null),
+  pros: z.string().nullable().default(null),
+  cons: z.string().nullable().default(null),
+  engagementText: z.string().nullable().default(null),
+  difficulty: z.string().nullable().default(null),
+  budgetLevel: z.string().nullable().default(null),
 });
 
 export const insertVoteSchema = createInsertSchema(votes).omit({

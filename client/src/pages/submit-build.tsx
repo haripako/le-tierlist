@@ -22,6 +22,11 @@ type ExtractedBuild = {
   mainSkills: string[];
   sourceType: string;
   confidence: "high" | "medium" | "low";
+  pros?: string[];
+  cons?: string[];
+  engagementText?: string;
+  difficulty?: "beginner" | "intermediate" | "advanced" | "expert";
+  budgetLevel?: "budget" | "mid-range" | "expensive" | "endgame";
 };
 
 export default function SubmitBuildPage() {
@@ -56,6 +61,12 @@ export default function SubmitBuildPage() {
   const [description, setDescription] = useState("");
   const [mainSkills, setMainSkills] = useState("");
   const [extractConfidence, setExtractConfidence] = useState("");
+  // Rich content fields
+  const [engagementText, setEngagementText] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [budgetLevel, setBudgetLevel] = useState("");
+  const [prosText, setProsText] = useState(""); // comma-separated
+  const [consText, setConsText] = useState(""); // comma-separated
 
   // Fetch all games for game picker
   const { data: games } = useQuery<GameWithMeta[]>({
@@ -117,6 +128,11 @@ export default function SubmitBuildPage() {
       if (data.playstyle) setPlaystyle(data.playstyle);
       if (data.description) setDescription(data.description);
       if (data.mainSkills?.length) setMainSkills(data.mainSkills.join(", "));
+      if (data.engagementText) setEngagementText(data.engagementText);
+      if (data.difficulty) setDifficulty(data.difficulty);
+      if (data.budgetLevel) setBudgetLevel(data.budgetLevel);
+      if (data.pros?.length) setProsText(data.pros.join(", "));
+      if (data.cons?.length) setConsText(data.cons.join(", "));
       setExtractConfidence(data.confidence);
       setStep("edit");
     } catch {
@@ -130,6 +146,8 @@ export default function SubmitBuildPage() {
   const submitMutation = useMutation({
     mutationFn: async () => {
       const skillsArray = mainSkills.split(",").map(s => s.trim()).filter(Boolean);
+      const prosArray = prosText.split(",").map(s => s.trim()).filter(Boolean);
+      const consArray = consText.split(",").map(s => s.trim()).filter(Boolean);
       const res = await apiRequest("POST", "/api/builds", {
         gameId: selectedGame?.id,
         name,
@@ -142,6 +160,11 @@ export default function SubmitBuildPage() {
         mainSkills: JSON.stringify(skillsArray),
         guideUrl,
         submitterId: user?.id || null,
+        engagementText: engagementText || null,
+        difficulty: difficulty || null,
+        budgetLevel: budgetLevel || null,
+        pros: prosArray.length > 0 ? JSON.stringify(prosArray) : null,
+        cons: consArray.length > 0 ? JSON.stringify(consArray) : null,
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Failed"); }
       return res.json();
@@ -401,6 +424,59 @@ export default function SubmitBuildPage() {
           <div className="space-y-2">
             <Label htmlFor="desc" className="text-sm font-semibold">Description</Label>
             <Textarea id="desc" placeholder="Brief overview of the build, what makes it strong, tips for playing it..." value={description} onChange={e => setDescription(e.target.value)} rows={3} data-testid="input-description" />
+          </div>
+
+          {/* Engagement Text */}
+          <div className="space-y-2">
+            <Label htmlFor="engagement" className="text-sm font-semibold">Hook / Engagement Text <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Textarea id="engagement" placeholder="e.g. Freeze entire screens and teleport through maps faster than any other class." value={engagementText} onChange={e => setEngagementText(e.target.value)} rows={2} data-testid="input-engagement" />
+            <p className="text-[11px] text-muted-foreground">A punchy 1-2 sentence hook that makes users want to try the build</p>
+          </div>
+
+          {/* Difficulty + Budget */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Difficulty <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger data-testid="select-difficulty">
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                  <SelectItem value="expert">Expert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Budget <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Select value={budgetLevel} onValueChange={setBudgetLevel}>
+                <SelectTrigger data-testid="select-budget">
+                  <SelectValue placeholder="Select budget" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="budget">Budget</SelectItem>
+                  <SelectItem value="mid-range">Mid-Range</SelectItem>
+                  <SelectItem value="expensive">Expensive</SelectItem>
+                  <SelectItem value="endgame">Endgame (BiS)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Pros */}
+          <div className="space-y-2">
+            <Label htmlFor="pros" className="text-sm font-semibold">Pros <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input id="pros" placeholder="e.g. High AoE damage, Easy to gear, Great mapping speed" value={prosText} onChange={e => setProsText(e.target.value)} data-testid="input-pros" />
+            <p className="text-[11px] text-muted-foreground">Comma-separated list of strengths</p>
+          </div>
+
+          {/* Cons */}
+          <div className="space-y-2">
+            <Label htmlFor="cons" className="text-sm font-semibold">Cons <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input id="cons" placeholder="e.g. Squishy, Expensive endgame, Complex rotation" value={consText} onChange={e => setConsText(e.target.value)} data-testid="input-cons" />
+            <p className="text-[11px] text-muted-foreground">Comma-separated list of weaknesses</p>
           </div>
 
           <Button

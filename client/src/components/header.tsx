@@ -94,18 +94,18 @@ export default function Header() {
             </div>
           </Link>
 
-          <nav className="flex items-center gap-2">
+          <nav className="flex items-center gap-1.5 sm:gap-2">
             <Link href="/">
               <Button variant={location === "/" ? "secondary" : "ghost"} size="sm" data-testid="link-games">
-                <Home className="w-3.5 h-3.5 mr-1.5" />
-                Games
+                <Home className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">Games</span>
               </Button>
             </Link>
 
             <Link href="/submit">
               <Button variant={location === "/submit" ? "default" : "outline"} size="sm" data-testid="link-submit">
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Submit Build
+                <Plus className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">Submit Build</span>
               </Button>
             </Link>
 

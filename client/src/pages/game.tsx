@@ -148,11 +148,11 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex gap-2">
+      {/* View Mode Toggle — scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mb-1 no-scrollbar">
         <button
           onClick={() => setViewMode("tier-list")}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+          className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
             viewMode === "tier-list" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground border border-border"
           }`}
           data-testid="button-view-tierlist"
@@ -161,7 +161,7 @@ export default function GamePage() {
         </button>
         <button
           onClick={() => setViewMode("trending")}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+          className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
             viewMode === "trending" ? "bg-orange-500 text-white" : "bg-card text-muted-foreground hover:text-foreground border border-border"
           }`}
           data-testid="button-view-trending"
@@ -170,7 +170,7 @@ export default function GamePage() {
         </button>
         <button
           onClick={() => setViewMode("viral")}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+          className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
             viewMode === "viral" ? "bg-purple-500 text-white" : "bg-card text-muted-foreground hover:text-foreground border border-border"
           }`}
           data-testid="button-view-viral"
@@ -196,12 +196,12 @@ export default function GamePage() {
           </Select>
         )}
 
-        {/* Game mode toggle — dynamic from API */}
+        {/* Game mode toggle — dynamic from API, horizontal scroll on mobile */}
         {modes.length > 0 && (
-          <div className="flex rounded-lg border border-border overflow-hidden" data-testid="mode-toggle-group">
+          <div className="flex rounded-lg border border-border overflow-x-auto max-w-full no-scrollbar" data-testid="mode-toggle-group">
             <button
               onClick={() => setGameModeId("all")}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${gameModeId === "all" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              className={`shrink-0 px-4 py-2 text-sm font-medium transition-colors ${gameModeId === "all" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
               data-testid="button-mode-all"
             >
               All
@@ -210,7 +210,7 @@ export default function GamePage() {
               <button
                 key={mode.id}
                 onClick={() => setGameModeId(String(mode.id))}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${gameModeId === String(mode.id) ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                className={`shrink-0 px-4 py-2 text-sm font-medium transition-colors ${gameModeId === String(mode.id) ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
                 data-testid={`button-mode-${mode.slug}`}
               >
                 {mode.name}
@@ -277,10 +277,10 @@ export default function GamePage() {
       {/* Tier List */}
       {viewMode === "tier-list" && tierLoading ? (
         <div className="space-y-6">
-          {["S", "A", "B", "C", "D"].map(tier => (
+          {["S", "A", "B", "C", "D", "N"].map(tier => (
             <div key={tier} className="space-y-3">
               <Skeleton className="h-8 w-32" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Skeleton className="h-32" /><Skeleton className="h-32" />
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function GamePage() {
         </div>
       ) : viewMode === "tier-list" && filteredTierList ? (
         <div className="space-y-6">
-          {(["S", "A", "B", "C", "D"] as const).map(tier => {
+          {(["S", "A", "B", "C", "D", "N"] as const).map(tier => {
             const tierBuilds = (filteredTierList[tier] || []) as TierBuild[];
             const config = TIER_CONFIG[tier];
             if (tierBuilds.length === 0) return null;
@@ -297,7 +297,7 @@ export default function GamePage() {
               <div key={tier} className="space-y-3" data-testid={`tier-section-${tier}`}>
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg text-white ${config.bgAccent}`}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${tier === 'N' ? 'bg-gray-500/20 text-gray-400' : 'text-white ' + config.bgAccent}`}
                     style={{ fontFamily: "'Cabinet Grotesk', sans-serif" }}
                   >
                     {config.label}
@@ -309,7 +309,7 @@ export default function GamePage() {
                     </Badge>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {tierBuilds.map(build => (
                     <BuildCard
                       key={build.id}
