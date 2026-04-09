@@ -209,15 +209,22 @@ NODE_ENV=production node dist/index.cjs
 
 ## Deploy en Render (gratis)
 
-1. Haz push del repo a GitHub
-2. Ve a [render.com](https://render.com) y conecta tu cuenta de GitHub
-3. Clic en **New** → **Web Service**
-4. Selecciona este repositorio
-5. Configura:
+### Un clic (recomendado)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/haripako/le-tierlist)
+
+Haz clic en el botón, conecta tu cuenta de GitHub si no lo has hecho, y Render configurará todo automáticamente usando el `render.yaml` incluido.
+
+### Manual
+
+1. Ve a [render.com](https://render.com) y conecta tu cuenta de GitHub
+2. Clic en **New** → **Web Service**
+3. Selecciona este repositorio
+4. Configura:
    - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
    - **Instance Type**: Free
-6. Clic en **Create Web Service**
+5. Clic en **Create Web Service**
 
 El servicio se despliega automáticamente con cada push a `main`. La versión gratuita se suspende tras 15 minutos sin tráfico (tarda ~30s en despertar).
 
