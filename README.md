@@ -221,7 +221,7 @@ Haz clic en el botón, conecta tu cuenta de GitHub si no lo has hecho, y Render 
 2. Clic en **New** → **Web Service**
 3. Selecciona este repositorio
 4. Configura:
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm install --include=dev && npm run build`
    - **Start Command**: `npm start`
    - **Instance Type**: Free
 5. Clic en **Create Web Service**
