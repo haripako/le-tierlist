@@ -354,84 +354,168 @@ function seedData() {
   }
 
   // Diablo IV classes
-  for (const name of ["Barbarian", "Necromancer", "Sorcerer", "Druid", "Rogue", "Spiritborn", "Paladin"]) {
-    storage.createGameClass({ gameId: d4Id, name, masteries: "[]", color: "#b91c1c" });
+  const d4Classes = [
+    { name: "Barbarian", masteries: ["Walking Arsenal", "Unbridled Rage", "Whirlwind"] },
+    { name: "Druid", masteries: ["Werebear", "Werewolf", "Storm"] },
+    { name: "Necromancer", masteries: ["Bone", "Blood", "Shadow", "Army"] },
+    { name: "Rogue", masteries: ["Combo Points", "Inner Sight", "Preparation"] },
+    { name: "Sorcerer", masteries: ["Fire", "Cold", "Lightning"] },
+    { name: "Spiritborn", masteries: ["Jaguar", "Eagle", "Gorilla", "Centipede"] },
+    { name: "Paladin", masteries: [] },
+  ];
+  for (const c of d4Classes) {
+    storage.createGameClass({ gameId: d4Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#b91c1c" });
   }
 
   // Path of Exile 2 classes
   const poe2Classes = [
-    { name: "Warrior", masteries: ["Titan", "Warbringer"] },
-    { name: "Ranger", masteries: ["Deadeye", "Pathfinder"] },
-    { name: "Witch", masteries: ["Infernalist", "Blood Mage"] },
-    { name: "Mercenary", masteries: ["Witchhunter", "Gemling Legionnaire"] },
+    { name: "Mercenary", masteries: ["Witchhunter", "Gemling Legionnaire", "Tactician"] },
     { name: "Monk", masteries: ["Invoker", "Acolyte of Chayula"] },
-    { name: "Sorceress", masteries: ["Stormweaver", "Chronomancer"] },
+    { name: "Ranger", masteries: ["Deadeye", "Pathfinder"] },
+    { name: "Sorceress", masteries: ["Stormweaver", "Chronomancer", "Disciple of Varashta"] },
+    { name: "Warrior", masteries: ["Titan", "Warbringer", "Smith of Kitava"] },
+    { name: "Witch", masteries: ["Blood Mage", "Infernalist", "Lich"] },
     { name: "Huntress", masteries: ["Amazon", "Ritualist"] },
-    { name: "Druid", masteries: ["Lich", "Warden"] },
+    { name: "Druid", masteries: ["Shaman", "Oracle"] },
   ];
   for (const c of poe2Classes) {
     storage.createGameClass({ gameId: poe2Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#c2410c" });
   }
 
   // Path of Exile classes
-  for (const name of ["Duelist", "Marauder", "Ranger", "Shadow", "Templar", "Witch", "Scion"]) {
-    storage.createGameClass({ gameId: poeId, name, masteries: "[]", color: "#9c6522" });
+  const poeClasses = [
+    { name: "Marauder", masteries: ["Juggernaut", "Berserker", "Chieftain"] },
+    { name: "Witch", masteries: ["Necromancer", "Elementalist", "Occultist"] },
+    { name: "Ranger", masteries: ["Deadeye", "Raider", "Pathfinder"] },
+    { name: "Duelist", masteries: ["Slayer", "Gladiator", "Champion"] },
+    { name: "Shadow", masteries: ["Assassin", "Saboteur", "Trickster"] },
+    { name: "Templar", masteries: ["Inquisitor", "Hierophant", "Guardian"] },
+    { name: "Scion", masteries: ["Ascendant"] },
+  ];
+  for (const c of poeClasses) {
+    storage.createGameClass({ gameId: poeId, name: c.name, masteries: JSON.stringify(c.masteries), color: "#9c6522" });
   }
 
   // Diablo II Resurrected
-  for (const name of ["Amazon", "Necromancer", "Barbarian", "Sorceress", "Paladin", "Druid", "Assassin", "Warlock"]) {
-    storage.createGameClass({ gameId: d2rId, name, masteries: "[]", color: "#7c3aed" });
+  const d2rClasses = [
+    { name: "Amazon", masteries: ["Javelin and Spear", "Bow and Crossbow", "Passive and Magic"] },
+    { name: "Assassin", masteries: ["Martial Arts", "Traps", "Shadow Disciplines"] },
+    { name: "Barbarian", masteries: ["Warcries", "Combat Skills", "Combat Masteries"] },
+    { name: "Druid", masteries: ["Elemental", "Shape Shifting", "Summoning"] },
+    { name: "Necromancer", masteries: ["Summoning", "Poison and Bone", "Curses"] },
+    { name: "Paladin", masteries: ["Combat", "Offensive Auras", "Defensive Auras"] },
+    { name: "Sorceress", masteries: ["Fire", "Lightning", "Cold"] },
+    { name: "Warlock", masteries: ["Arts of Chaos", "Eldritch Weapons", "Demonic Binding"] },
+  ];
+  for (const c of d2rClasses) {
+    storage.createGameClass({ gameId: d2rId, name: c.name, masteries: JSON.stringify(c.masteries), color: "#7c3aed" });
   }
 
   // Diablo III
-  for (const name of ["Barbarian", "Crusader", "Demon Hunter", "Monk", "Necromancer", "Witch Doctor", "Wizard"]) {
-    storage.createGameClass({ gameId: d3Id, name, masteries: "[]", color: "#1d4ed8" });
+  const d3Classes = [
+    { name: "Barbarian", masteries: ["Might of the Earth", "Immortal King", "Raekor", "Horde of the Ninety Savages", "Bul-Kathos"] },
+    { name: "Crusader", masteries: ["Akkhan", "Aegis of Valor", "Roland", "Seeker of the Light", "Norvald"] },
+    { name: "Demon Hunter", masteries: ["Marauder", "Natalya", "Shadow", "Gears of Dreadlands", "Unhallowed Essence"] },
+    { name: "Monk", masteries: ["Inna", "Monkey King", "Raiment", "Patterns of Justice", "Shenlong"] },
+    { name: "Necromancer", masteries: ["Rathma", "Inarius", "Pestilence", "Masquerade", "Trag'Oul"] },
+    { name: "Witch Doctor", masteries: ["Helltooth", "Mundunugu", "Jade Harvester", "Arachyr", "Zunimassa"] },
+    { name: "Wizard", masteries: ["Tal Rasha", "Firebird", "Delsere", "Typhon", "Vyr"] },
+  ];
+  for (const c of d3Classes) {
+    storage.createGameClass({ gameId: d3Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#1d4ed8" });
   }
 
-  // Grim Dawn — dual class combos as classes
-  for (const name of [
-    "Warder (Soldier + Shaman)", "Dervish (Oathkeeper + Nightblade)", "Reaper (Nightblade + Necromancer)",
-    "Blademaster (Soldier + Nightblade)", "Shieldbreaker (Demolitionist + Oathkeeper)",
-    "Sentinel (Inquisitor + Shaman)", "Conjurer (Occultist + Shaman)", "Ritualist (Occultist + Shaman)",
-    "Cabalist (Occultist + Arcanist)", "Witch Hunter (Inquisitor + Nightblade)",
-    "Purifier (Demolitionist + Inquisitor)", "Oppressor (Occultist + Inquisitor)"
-  ]) {
-    storage.createGameClass({ gameId: gdId, name, masteries: "[]", color: "#6b7280" });
+  // Grim Dawn — each mastery with dual-class combinations
+  const gdClasses = [
+    { name: "Soldier", masteries: ["Commando", "Witchblade", "Blademaster", "Battlemage", "Warder", "Tactician", "Death Knight", "Warlord"] },
+    { name: "Demolitionist", masteries: ["Commando", "Pyromancer", "Saboteur", "Sorcerer", "Elementalist", "Purifier", "Defiler", "Shieldbreaker"] },
+    { name: "Occultist", masteries: ["Witchblade", "Pyromancer", "Witch Hunter", "Warlock", "Conjurer", "Deceiver", "Cabalist", "Sentinel"] },
+    { name: "Nightblade", masteries: ["Blademaster", "Saboteur", "Witch Hunter", "Spellbreaker", "Trickster", "Infiltrator", "Reaper", "Dervish"] },
+    { name: "Arcanist", masteries: ["Battlemage", "Sorcerer", "Warlock", "Spellbreaker", "Druid", "Mage Hunter", "Spellbinder", "Templar"] },
+    { name: "Shaman", masteries: ["Warder", "Elementalist", "Conjurer", "Trickster", "Druid", "Vindicator", "Ritualist", "Archon"] },
+    { name: "Inquisitor", masteries: ["Tactician", "Purifier", "Deceiver", "Infiltrator", "Mage Hunter", "Vindicator", "Apostate", "Paladin"] },
+    { name: "Necromancer", masteries: ["Death Knight", "Defiler", "Cabalist", "Reaper", "Spellbinder", "Ritualist", "Apostate", "Oppressor"] },
+    { name: "Oathkeeper", masteries: ["Warlord", "Shieldbreaker", "Sentinel", "Dervish", "Templar", "Archon", "Paladin", "Oppressor"] },
+  ];
+  for (const c of gdClasses) {
+    storage.createGameClass({ gameId: gdId, name: c.name, masteries: JSON.stringify(c.masteries), color: "#6b7280" });
   }
 
   // Torchlight Infinite
-  for (const name of ["Youga", "Gemma", "Erica", "Thea", "Rosa", "Karano", "Bing", "Rehan", "Iris"]) {
-    storage.createGameClass({ gameId: tlId, name, masteries: "[]", color: "#0891b2" });
+  const tlClasses = [
+    { name: "Berserker Rehan", masteries: ["Anger", "Seething Silhouette"] },
+    { name: "Divineshot Carino", masteries: ["Ranger of Glory", "Lethal Flash", "Zealot of War"] },
+    { name: "Cateye Erika", masteries: ["Wind Stalker", "Lightning Shadow"] },
+    { name: "Commander Moto", masteries: ["Order of Thunder", "War Machine"] },
+    { name: "Gemma", masteries: ["Flame Spell", "Frost Spell", "Lightning Spell"] },
+    { name: "Spacetime Witness Youga", masteries: ["Spacetime Illusion", "Spacetime Elapse"] },
+    { name: "Frostfire Gemma", masteries: ["Frostfire Mastery", "Element Overflow"] },
+    { name: "Bing", masteries: ["Ranger of Ice", "Dashing Thief"] },
+    { name: "Thea", masteries: ["Oracle", "Puppeteer"] },
+  ];
+  for (const c of tlClasses) {
+    storage.createGameClass({ gameId: tlId, name: c.name, masteries: JSON.stringify(c.masteries), color: "#0891b2" });
   }
 
   // Destiny 2
-  const d2Classes = [
-    { name: "Hunter", masteries: ["Solar", "Arc", "Void", "Stasis", "Strand"] },
-    { name: "Titan", masteries: ["Solar", "Arc", "Void", "Stasis", "Strand"] },
-    { name: "Warlock", masteries: ["Solar", "Arc", "Void", "Stasis", "Strand"] },
+  const dest2Classes = [
+    { name: "Hunter", masteries: ["Gunslinger (Solar)", "Arcstrider (Arc)", "Nightstalker (Void)", "Revenant (Stasis)", "Threadrunner (Strand)", "Prismatic"] },
+    { name: "Titan", masteries: ["Striker (Arc)", "Sentinel (Void)", "Sunbreaker (Solar)", "Behemoth (Stasis)", "Berserker (Strand)", "Prismatic"] },
+    { name: "Warlock", masteries: ["Dawnblade (Solar)", "Stormcaller (Arc)", "Voidwalker (Void)", "Shadebinder (Stasis)", "Broodweaver (Strand)", "Prismatic"] },
   ];
-  for (const c of d2Classes) {
+  for (const c of dest2Classes) {
     storage.createGameClass({ gameId: d2Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#1e3a5f" });
   }
 
   // Borderlands 3
-  for (const name of ["Amara", "FL4K", "Moze", "Zane"]) {
-    storage.createGameClass({ gameId: bl3Id, name, masteries: "[]", color: "#f59e0b" });
+  const bl3Classes = [
+    { name: "Amara", masteries: ["Brawl", "Mystical Assault", "Fist of the Elements", "Enlightened Force"] },
+    { name: "FL4K", masteries: ["Stalker", "Master", "Hunter", "Trapper"] },
+    { name: "Moze", masteries: ["Bottomless Mags", "Demolition Woman", "Shield of Retribution", "Bear Mother"] },
+    { name: "Zane", masteries: ["Under Cover", "Hitman", "Doubled Agent", "The Professional"] },
+  ];
+  for (const c of bl3Classes) {
+    storage.createGameClass({ gameId: bl3Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#f59e0b" });
   }
 
   // Borderlands 4
-  for (const name of ["Amon the Forgeknight", "Rafa the Exo-Soldier", "C4SH the Rogue", "Harlowe the Gravitar", "Vex the Siren"]) {
-    storage.createGameClass({ gameId: bl4Id, name, masteries: "[]", color: "#d97706" });
+  const bl4Classes = [
+    { name: "Amon the Forgeknight", masteries: ["Calamity", "Cybernetics", "Vengeance"] },
+    { name: "Harlowe the Gravitar", masteries: ["Cosmic Brilliance", "Creative Bursts", "Seize the Day"] },
+    { name: "Rafa the Exo-Soldier", masteries: ["Remote Agent", "People Person", "This Year's Gimmick"] },
+    { name: "Vex the Siren", masteries: ["Here Comes Trouble", "The Fourth Seal", "Vexcalation"] },
+    { name: "C4SH the Rogue", masteries: ["Chaos Walking", "Luck of the Draw", "Roll the Bones"] },
+  ];
+  for (const c of bl4Classes) {
+    storage.createGameClass({ gameId: bl4Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#d97706" });
   }
 
   // Fallout 4 (playstyle-based)
-  for (const name of ["Rifleman", "Melee", "Heavy Weapons", "Sniper", "Pistol", "Automatic", "VATS", "Speech", "Heavy", "Unarmed", "Diplomat", "Rifle"]) {
-    storage.createGameClass({ gameId: fo4Id, name, masteries: "[]", color: "#4d7c0f" });
+  const fo4Classes = [
+    { name: "Rifleman", masteries: ["Sniper", "Commando", "Marksman"] },
+    { name: "Melee", masteries: ["Unarmed", "Bladed", "Blunt", "Power Fist"] },
+    { name: "Heavy Weapons", masteries: ["Power Armor", "Gatling", "Explosives"] },
+    { name: "Stealth", masteries: ["Sneak Assassin", "Night Sniper", "Infiltrator"] },
+    { name: "VATS", masteries: ["Critical Banker", "Gun Fu", "Blitz"] },
+    { name: "Gunslinger", masteries: ["Pistol VATS", "Deliverer", "Lucky"] },
+    { name: "Survival", masteries: ["Chemist", "Medic", "Scavenger"] },
+    { name: "Crafter", masteries: ["Gun Nut", "Armorer", "Scientist"] },
+    { name: "Settler", masteries: ["Local Leader", "Supply Lines", "Merchant"] },
+    { name: "Diplomat", masteries: ["Intimidation", "Cap Collector", "Inspirational"] },
+    { name: "Sniper", masteries: ["Sandman", "Rifleman", "Awareness"] },
+    { name: "Power Armor", masteries: ["Science", "Nuclear Physicist", "Pain Train"] },
+  ];
+  for (const c of fo4Classes) {
+    storage.createGameClass({ gameId: fo4Id, name: c.name, masteries: JSON.stringify(c.masteries), color: "#4d7c0f" });
   }
 
   // Crimson Desert
-  for (const name of ["Kliff", "Oongka"]) {
-    storage.createGameClass({ gameId: cdId, name, masteries: "[]", color: "#991b1b" });
+  const cdClasses = [
+    { name: "Macduff", masteries: ["Stamina", "Spirit", "Health"] },
+    { name: "Kliff", masteries: ["Stamina", "Spirit", "Health"] },
+  ];
+  for (const c of cdClasses) {
+    storage.createGameClass({ gameId: cdId, name: c.name, masteries: JSON.stringify(c.masteries), color: "#991b1b" });
   }
 
   // ── Game Modes ──
@@ -740,7 +824,7 @@ function seedData() {
   const d4DefaultMode = createdModes["diablo-4"]["softcore"];
   const d4Builds: RichBuild[] = [
     {
-      name: "Thorns Blessed Shield Paladin", className: "Paladin",
+      name: "Thorns Blessed Shield Paladin", className: "Paladin", mastery: "",
       guideUrl: "https://maxroll.gg/d4/build-guides/thorns-blessed-shield-paladin",
       description: "Thorns-scaling Paladin that reflects massive damage back to enemies.",
       playstyle: "melee",
@@ -750,7 +834,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Blessed Hammer Paladin", className: "Paladin",
+      name: "Blessed Hammer Paladin", className: "Paladin", mastery: "",
       guideUrl: "https://maxroll.gg/d4/build-guides/blessed-hammer-paladin",
       description: "Classic Hammerdin revived for D4 with Blessed Hammer creating spinning projectiles.",
       playstyle: "melee",
@@ -760,7 +844,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Aura Paladin (Auradin)", className: "Paladin",
+      name: "Aura Paladin (Auradin)", className: "Paladin", mastery: "",
       guideUrl: "https://maxroll.gg/d4/build-guides/aura-paladin",
       description: "Passive aura-driven build that damages everything on screen permanently.",
       playstyle: "melee",
@@ -770,7 +854,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Wing Strikes Paladin", className: "Paladin",
+      name: "Wing Strikes Paladin", className: "Paladin", mastery: "",
       guideUrl: "https://maxroll.gg/d4/build-guides/wing-strikes-paladin",
       description: "Aerial attack Paladin with massive burst damage on demand.",
       playstyle: "melee",
@@ -780,7 +864,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Pulverize Druid", className: "Druid",
+      name: "Pulverize Druid", className: "Druid", mastery: "Werebear",
       guideUrl: "https://maxroll.gg/d4/build-guides/pulverize-druid",
       description: "Werebear form slamming everything with Pulverize — huge AoE and great sustain.",
       playstyle: "melee",
@@ -790,7 +874,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Hammer of the Ancients Barbarian", className: "Barbarian",
+      name: "Hammer of the Ancients Barbarian", className: "Barbarian", mastery: "Unbridled Rage",
       guideUrl: "https://maxroll.gg/d4/build-guides/hota-barbarian",
       description: "Single massive hammer blow that obliterates all enemies in one hit.",
       playstyle: "melee",
@@ -800,7 +884,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Lunging Strike Barbarian", className: "Barbarian",
+      name: "Lunging Strike Barbarian", className: "Barbarian", mastery: "Walking Arsenal",
       guideUrl: "https://maxroll.gg/d4/build-guides/lunging-strike-barbarian",
       description: "Frenzy-stacking brawler with high uptime damage and great mobility.",
       playstyle: "melee",
@@ -810,7 +894,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Crackling Energy Sorcerer", className: "Sorcerer",
+      name: "Crackling Energy Sorcerer", className: "Sorcerer", mastery: "Lightning",
       guideUrl: "https://maxroll.gg/d4/build-guides/crackling-energy-sorcerer",
       description: "Lightning Sorcerer that passively spawns Crackling Energy orbs for massive damage.",
       playstyle: "caster",
@@ -820,7 +904,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Payback Spiritborn", className: "Spiritborn",
+      name: "Payback Spiritborn", className: "Spiritborn", mastery: "Gorilla",
       guideUrl: "https://maxroll.gg/d4/build-guides/payback-spiritborn",
       description: "Spirit-powered retaliation build with insane damage scaling on tanky characters.",
       playstyle: "hybrid",
@@ -830,7 +914,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Infinite Evade Eagle Spiritborn", className: "Spiritborn",
+      name: "Infinite Evade Eagle Spiritborn", className: "Spiritborn", mastery: "Eagle",
       guideUrl: "https://maxroll.gg/d4/build-guides/eagle-spiritborn-evade",
       description: "Eagle aspect Spiritborn with infinite Evade charges for constant repositioning.",
       playstyle: "ranged",
@@ -840,7 +924,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Golem Necromancer", className: "Necromancer",
+      name: "Golem Necromancer", className: "Necromancer", mastery: "Army",
       guideUrl: "https://maxroll.gg/d4/build-guides/golem-necromancer",
       description: "Iron Golem as the primary damage dealer with Necromancer buffs and minions.",
       playstyle: "summoner",
@@ -850,7 +934,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Shadow Blight Necromancer", className: "Necromancer",
+      name: "Shadow Blight Necromancer", className: "Necromancer", mastery: "Shadow",
       guideUrl: "https://maxroll.gg/d4/build-guides/shadow-blight-necromancer",
       description: "Shadow realm DoT build with excellent wave clear through Blight explosions.",
       playstyle: "caster",
@@ -860,7 +944,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Heartseeker Rogue", className: "Rogue",
+      name: "Heartseeker Rogue", className: "Rogue", mastery: "Combo Points",
       guideUrl: "https://maxroll.gg/d4/build-guides/heartseeker-rogue",
       description: "Bow Rogue using Heartseeker to rapidly stack critical hit multipliers.",
       playstyle: "ranged",
@@ -870,7 +954,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Death Trap Rogue", className: "Rogue",
+      name: "Death Trap Rogue", className: "Rogue", mastery: "Preparation",
       guideUrl: "https://maxroll.gg/d4/build-guides/death-trap-rogue",
       description: "Trap placement build with massive burst on boss encounters using Death Trap.",
       playstyle: "ranged",
@@ -880,7 +964,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Earthquake Barbarian", className: "Barbarian",
+      name: "Earthquake Barbarian", className: "Barbarian", mastery: "Whirlwind",
       guideUrl: "https://maxroll.gg/d4/build-guides/earthquake-barbarian",
       description: "Ground-shaking melee Barbarian with stacking Earthquake damage on all enemies.",
       playstyle: "melee",
@@ -896,7 +980,7 @@ function seedData() {
   const poe2DefaultMode = createdModes["path-of-exile-2"]["trade-sc"];
   const poe2Builds: RichBuild[] = [
     {
-      name: "Pathfinder Ladder Topper", className: "Ranger",
+      name: "Pathfinder Ladder Topper", className: "Ranger", mastery: "Pathfinder",
       guideUrl: "https://poe.ninja/builds/0.4?class=Ranger&corePassive=Pathfinder",
       description: "Top ladder Ranger using Pathfinder ascendancy for explosive flask scaling.",
       playstyle: "ranged",
@@ -916,7 +1000,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Amazon Resurrect Ranger", className: "Ranger",
+      name: "Amazon Resurrect Ranger", className: "Ranger", mastery: "Deadeye",
       guideUrl: "https://www.youtube.com/watch?v=poe2_ranger_s4",
       description: "Resurrection-stacking Amazon-spec Ranger with summon synergies.",
       playstyle: "summoner",
@@ -926,7 +1010,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Smith of Kitava Warrior", className: "Warrior", mastery: "Warbringer",
+      name: "Smith of Kitava Warrior", className: "Warrior", mastery: "Smith of Kitava",
       guideUrl: "https://maxroll.gg/poe2/build-guides/smith-kitava-warrior",
       description: "Forge god Warrior that summons spectral weapons and overwhelms enemies.",
       playstyle: "melee",
@@ -936,7 +1020,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Lich Malarz Witch", className: "Witch", mastery: "Blood Mage",
+      name: "Lich Malarz Witch", className: "Witch", mastery: "Lich",
       guideUrl: "https://maxroll.gg/poe2/build-guides/witch-lich",
       description: "Death magic Witch with Lich spectres that reanimate slain enemies.",
       playstyle: "summoner",
@@ -946,7 +1030,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Oracle Druid", className: "Druid", mastery: "Warden",
+      name: "Oracle Druid", className: "Druid", mastery: "Oracle",
       guideUrl: "https://maxroll.gg/poe2/build-guides/oracle-druid",
       description: "Prophetic oracle gameplay loop with high defensive layering.",
       playstyle: "caster",
@@ -1052,7 +1136,7 @@ function seedData() {
   const poeDefaultMode = createdModes["path-of-exile"]["trade-sc"];
   const poeBuilds: RichBuild[] = [
     {
-      name: "Kinetic Fusillade Hierophant", className: "Templar",
+      name: "Kinetic Fusillade Hierophant", className: "Templar", mastery: "Hierophant",
       guideUrl: "https://poe.ninja/builds/3.28?class=Templar&corePassive=Hierophant",
       description: "Totem-buffed Kinetic Blast Hierophant with incredible pack-clearing speed.",
       playstyle: "ranged",
@@ -1062,7 +1146,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Righteous Fire Chieftain", className: "Marauder",
+      name: "Righteous Fire Chieftain", className: "Marauder", mastery: "Chieftain",
       guideUrl: "https://poe.ninja/builds/3.28?class=Marauder&corePassive=Chieftain",
       description: "Classic RF build that burns everything including the character for damage scaling.",
       playstyle: "caster",
@@ -1072,7 +1156,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Elemental Hit Slayer", className: "Duelist",
+      name: "Elemental Hit Slayer", className: "Duelist", mastery: "Slayer",
       guideUrl: "https://poe.ninja/builds/3.28?class=Duelist&corePassive=Slayer",
       description: "Elemental hit Slayer with one-shot potential on any random element.",
       playstyle: "ranged",
@@ -1082,7 +1166,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Lightning Arrow Deadeye", className: "Ranger",
+      name: "Lightning Arrow Deadeye", className: "Ranger", mastery: "Deadeye",
       guideUrl: "https://poe.ninja/builds/3.28?class=Ranger&corePassive=Deadeye",
       description: "Top ladder bow build in 3.28 with chain lightning clearing entire maps.",
       playstyle: "ranged",
@@ -1092,7 +1176,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Kinetic Blast Necromancer", className: "Witch",
+      name: "Kinetic Blast Necromancer", className: "Witch", mastery: "Necromancer",
       guideUrl: "https://poe.ninja/builds/3.28?class=Witch&corePassive=Necromancer",
       description: "Wand-wielding Witch with explosions from Kinetic Blast chaining everywhere.",
       playstyle: "caster",
@@ -1102,7 +1186,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Absolution Guardian", className: "Templar",
+      name: "Absolution Guardian", className: "Templar", mastery: "Guardian",
       guideUrl: "https://www.youtube.com/watch?v=poe_guardian_abs",
       description: "Minion summoner Guardian with Absolution spectres and massive aura stacking.",
       playstyle: "summoner",
@@ -1112,7 +1196,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Flicker Strike Gladiator", className: "Duelist",
+      name: "Flicker Strike Gladiator", className: "Duelist", mastery: "Gladiator",
       guideUrl: "https://www.youtube.com/watch?v=poe_flicker_glad",
       description: "Teleporting melee madness with Flicker Strike at impossible speed.",
       playstyle: "melee",
@@ -1122,7 +1206,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Holy Flame Totem Inquisitor", className: "Templar",
+      name: "Holy Flame Totem Inquisitor", className: "Templar", mastery: "Inquisitor",
       guideUrl: "https://www.youtube.com/watch?v=poe_inquisitor_totem",
       description: "Budget-friendly Inquisitor placer with fire totems for excellent wave clear.",
       playstyle: "caster",
@@ -1132,7 +1216,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Shock Nova Archmage Hierophant", className: "Templar",
+      name: "Shock Nova Archmage Hierophant", className: "Templar", mastery: "Hierophant",
       guideUrl: "https://www.youtube.com/watch?v=poe_shock_nova",
       description: "Massive mana-investment Archmage build with Shock Nova for insane damage.",
       playstyle: "caster",
@@ -1142,7 +1226,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Exsanguinate Reap Miner Saboteur", className: "Shadow",
+      name: "Exsanguinate Reap Miner Saboteur", className: "Shadow", mastery: "Saboteur",
       guideUrl: "https://www.youtube.com/watch?v=poe_saboteur_mine",
       description: "Mine spammer Saboteur using blood spells for devastating detonation chains.",
       playstyle: "caster",
@@ -1152,7 +1236,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Toxic Rain Pathfinder", className: "Ranger",
+      name: "Toxic Rain Pathfinder", className: "Ranger", mastery: "Pathfinder",
       guideUrl: "https://maxroll.gg/poe/build-guides/toxic-rain-pathfinder",
       description: "Bow DoT build that rains poison pods for relentless area denial.",
       playstyle: "ranged",
@@ -1162,7 +1246,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Siege Ballista Hierophant", className: "Templar",
+      name: "Siege Ballista Hierophant", className: "Templar", mastery: "Hierophant",
       guideUrl: "https://maxroll.gg/poe/build-guides/siege-ballista-hierophant",
       description: "Turret placement build with high DPS ceiling from stacked ballista totems.",
       playstyle: "ranged",
@@ -1172,7 +1256,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Sunder Ignite Elementalist", className: "Witch",
+      name: "Sunder Ignite Elementalist", className: "Witch", mastery: "Elementalist",
       guideUrl: "https://maxroll.gg/poe/build-guides/sunder-ignite-elementalist",
       description: "Melee ignite Elementalist with guaranteed spreading fire from every Sunder.",
       playstyle: "melee",
@@ -1182,7 +1266,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Poison SRS Necromancer", className: "Witch",
+      name: "Poison SRS Necromancer", className: "Witch", mastery: "Necromancer",
       guideUrl: "https://maxroll.gg/poe/build-guides/poison-srs-necromancer",
       description: "Spirit minions coated in poison for ramping DoT damage on all enemies.",
       playstyle: "summoner",
@@ -1192,7 +1276,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Cyclone Slayer", className: "Duelist",
+      name: "Cyclone Slayer", className: "Duelist", mastery: "Slayer",
       guideUrl: "https://maxroll.gg/poe/build-guides/cyclone-slayer",
       description: "Classic Cyclone for infinite spinning and blade vortex overlapping.",
       playstyle: "melee",
@@ -1208,7 +1292,7 @@ function seedData() {
   const d2rDefaultMode = createdModes["diablo-2-resurrected"]["softcore"];
   const d2rBuilds: RichBuild[] = [
     {
-      name: "Blizzard Sorceress", className: "Sorceress",
+      name: "Blizzard Sorceress", className: "Sorceress", mastery: "Cold",
       guideUrl: "https://maxroll.gg/d2/guides/blizzard-sorceress",
       description: "Fast leveling and farming with cold AoE damage and teleport mobility.",
       playstyle: "caster",
@@ -1218,7 +1302,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Fist of the Heavens Paladin", className: "Paladin",
+      name: "Fist of the Heavens Paladin", className: "Paladin", mastery: "Offensive Auras",
       guideUrl: "https://www.icy-veins.com/d2/fist-of-the-heavens-paladin-build",
       description: "Massive holy bolt damage for clearing packs of undead and demons.",
       playstyle: "caster",
@@ -1228,7 +1312,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Blessed Hammer Paladin", className: "Paladin",
+      name: "Blessed Hammer Paladin", className: "Paladin", mastery: "Combat",
       guideUrl: "https://maxroll.gg/d2/guides/blessed-hammer-paladin",
       description: "Magic damage hammers ignore immunities for versatile clearing.",
       playstyle: "melee",
@@ -1238,7 +1322,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Hydra Sorceress", className: "Sorceress",
+      name: "Hydra Sorceress", className: "Sorceress", mastery: "Fire",
       guideUrl: "https://maxroll.gg/d2/guides/hydra-sorceress",
       description: "Ranged fire damage with hydras for bossing and area clear.",
       playstyle: "caster",
@@ -1248,7 +1332,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Smite Paladin", className: "Paladin",
+      name: "Smite Paladin", className: "Paladin", mastery: "Combat",
       guideUrl: "https://www.icy-veins.com/d2/smiter-paladin-build",
       description: "Boss killer with guaranteed hits and crushing blow for Ubers.",
       playstyle: "melee",
@@ -1258,7 +1342,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Lightning Fury Amazon", className: "Amazon",
+      name: "Lightning Fury Amazon", className: "Amazon", mastery: "Javelin and Spear",
       guideUrl: "https://maxroll.gg/d2/guides/lightning-fury-amazon",
       description: "Chain lightning javelin that bounces between enemies for massive clear.",
       playstyle: "ranged",
@@ -1268,7 +1352,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Berserk Barbarian", className: "Barbarian",
+      name: "Berserk Barbarian", className: "Barbarian", mastery: "Combat Skills",
       guideUrl: "https://maxroll.gg/d2/guides/berserk-barbarian",
       description: "Berserking physical-to-magic converter for dealing with physical immune demons.",
       playstyle: "melee",
@@ -1278,7 +1362,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Lightning Sentry Assassin", className: "Assassin",
+      name: "Lightning Sentry Assassin", className: "Assassin", mastery: "Traps",
       guideUrl: "https://maxroll.gg/d2/guides/lightning-sentry-assassin",
       description: "Trap-setting Assassin that fills areas with electrocuting Lightning Sentries.",
       playstyle: "caster",
@@ -1288,7 +1372,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Summon Necromancer", className: "Necromancer",
+      name: "Summon Necromancer", className: "Necromancer", mastery: "Summoning",
       guideUrl: "https://maxroll.gg/d2/guides/summon-necromancer",
       description: "Army of skeletons and golems to overwhelm anything. Very safe playstyle.",
       playstyle: "summoner",
@@ -1298,7 +1382,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Fire Wall Sorceress", className: "Sorceress",
+      name: "Fire Wall Sorceress", className: "Sorceress", mastery: "Fire",
       guideUrl: "https://maxroll.gg/d2/guides/fire-wall-sorceress",
       description: "Immovable fire walls that enemies must walk through for constant burning damage.",
       playstyle: "caster",
@@ -1308,7 +1392,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Frozen Orb Sorceress", className: "Sorceress",
+      name: "Frozen Orb Sorceress", className: "Sorceress", mastery: "Cold",
       guideUrl: "https://maxroll.gg/d2/guides/frozen-orb-sorceress",
       description: "Classic cold build with Frozen Orb for exceptional AoE coverage.",
       playstyle: "caster",
@@ -1318,7 +1402,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Mosaic Assassin", className: "Assassin",
+      name: "Mosaic Assassin", className: "Assassin", mastery: "Martial Arts",
       guideUrl: "https://maxroll.gg/d2/guides/mosaic-assassin",
       description: "Charge-up Claws of Thunder Assassin with the Mosaic unique for incredible DPS.",
       playstyle: "melee",
@@ -1328,7 +1412,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Fissure Druid", className: "Druid",
+      name: "Fissure Druid", className: "Druid", mastery: "Elemental",
       guideUrl: "https://maxroll.gg/d2/guides/fissure-druid",
       description: "Fire elementalist Druid raining Fissure and Volcano for exceptional fire damage.",
       playstyle: "caster",
@@ -1338,7 +1422,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Bone Spear Necromancer", className: "Necromancer",
+      name: "Bone Spear Necromancer", className: "Necromancer", mastery: "Poison and Bone",
       guideUrl: "https://www.icy-veins.com/d2/bone-spear-necromancer-build",
       description: "Physical damage bone spears that bypass all resistances for versatile bossing.",
       playstyle: "caster",
@@ -1348,7 +1432,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Whirlwind Barbarian", className: "Barbarian",
+      name: "Whirlwind Barbarian", className: "Barbarian", mastery: "Combat Skills",
       guideUrl: "https://maxroll.gg/d2/guides/whirlwind-barbarian",
       description: "The iconic Barbarian spinning attack with dual-wield for maximum hits.",
       playstyle: "melee",
@@ -1364,7 +1448,7 @@ function seedData() {
   const d3DefaultMode = createdModes["diablo-3"]["softcore"];
   const d3Builds: RichBuild[] = [
     {
-      name: "Rathma Death Nova Necromancer", className: "Necromancer",
+      name: "Rathma Death Nova Necromancer", className: "Necromancer", mastery: "Rathma",
       guideUrl: "https://maxroll.gg/d3/build-guides/rathma-death-nova-necromancer",
       description: "Rathma set Necromancer spamming Death Nova for entire-screen AoE coverage.",
       playstyle: "caster",
@@ -1374,7 +1458,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "LoD Death Nova Necromancer", className: "Necromancer",
+      name: "LoD Death Nova Necromancer", className: "Necromancer", mastery: "Pestilence",
       guideUrl: "https://maxroll.gg/d3/build-guides/lod-death-nova-necromancer",
       description: "Legacy of Dreams Death Nova — budget-friendly and extremely potent.",
       playstyle: "caster",
@@ -1384,7 +1468,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Inarius Death Nova Necromancer", className: "Necromancer",
+      name: "Inarius Death Nova Necromancer", className: "Necromancer", mastery: "Inarius",
       guideUrl: "https://maxroll.gg/d3/build-guides/inarius-death-nova",
       description: "Bone armor-buffed Death Nova with Inarius set for melee range devastating damage.",
       playstyle: "caster",
@@ -1394,7 +1478,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Trag'Oul Death Nova Necromancer", className: "Necromancer",
+      name: "Trag'Oul Death Nova Necromancer", className: "Necromancer", mastery: "Trag'Oul",
       guideUrl: "https://maxroll.gg/d3/build-guides/tragoul-death-nova",
       description: "Health-fueled Death Nova using Trag'Oul set for blood magic scaling.",
       playstyle: "caster",
@@ -1404,7 +1488,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "LoD Bone Spear Necromancer", className: "Necromancer",
+      name: "LoD Bone Spear Necromancer", className: "Necromancer", mastery: "Masquerade",
       guideUrl: "https://maxroll.gg/d3/build-guides/lod-bone-spear",
       description: "Bone Spear with Legacy of Dreams for insane single-target boss damage.",
       playstyle: "caster",
@@ -1414,7 +1498,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "LoD Meteor Wizard", className: "Wizard",
+      name: "LoD Meteor Wizard", className: "Wizard", mastery: "Typhon",
       guideUrl: "https://maxroll.gg/d3/build-guides/lod-meteor-wizard",
       description: "Buffed meteor crashing in massive explosions with Legacy of Dreams for free gear.",
       playstyle: "caster",
@@ -1424,7 +1508,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Firebird Meteor Wizard", className: "Wizard",
+      name: "Firebird Meteor Wizard", className: "Wizard", mastery: "Firebird",
       guideUrl: "https://maxroll.gg/d3/build-guides/firebird-meteor-wizard",
       description: "Firebird set Meteor Wizard with fire damage ramping after consecutive meteor hits.",
       playstyle: "caster",
@@ -1434,7 +1518,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Tal Rasha Meteor Wizard", className: "Wizard",
+      name: "Tal Rasha Meteor Wizard", className: "Wizard", mastery: "Tal Rasha",
       guideUrl: "https://maxroll.gg/d3/build-guides/tal-rasha-meteor-wizard",
       description: "Four-element Tal Rasha set with Meteor stacking elemental damage bonuses.",
       playstyle: "caster",
@@ -1444,7 +1528,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Akkhan Condemn Crusader", className: "Crusader",
+      name: "Akkhan Condemn Crusader", className: "Crusader", mastery: "Akkhan",
       guideUrl: "https://maxroll.gg/d3/build-guides/akkhan-condemn-crusader",
       description: "Holy damage Crusader using Condemn explosions from the Akkhan set.",
       playstyle: "melee",
@@ -1454,7 +1538,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Natalya Spike Trap Demon Hunter", className: "Demon Hunter",
+      name: "Natalya Spike Trap Demon Hunter", className: "Demon Hunter", mastery: "Natalya",
       guideUrl: "https://maxroll.gg/d3/build-guides/natalya-spike-trap",
       description: "Natalya's set Demon Hunter placing Spike Traps that devastate elites instantly.",
       playstyle: "ranged",
@@ -1464,7 +1548,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Marauder Sentry Demon Hunter", className: "Demon Hunter",
+      name: "Marauder Sentry Demon Hunter", className: "Demon Hunter", mastery: "Marauder",
       guideUrl: "https://maxroll.gg/d3/build-guides/marauder-sentry",
       description: "Classic turret Demon Hunter with Marauder set and six simultaneous sentries.",
       playstyle: "ranged",
@@ -1474,7 +1558,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "LoD HotA Barbarian", className: "Barbarian",
+      name: "LoD HotA Barbarian", className: "Barbarian", mastery: "Horde of the Ninety Savages",
       guideUrl: "https://maxroll.gg/d3/build-guides/lod-hota-barbarian",
       description: "Hammer of the Ancients Legacy of Dreams Barbarian dealing devastating blows.",
       playstyle: "melee",
@@ -1484,7 +1568,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Raekor Boulder Toss Barbarian", className: "Barbarian",
+      name: "Raekor Boulder Toss Barbarian", className: "Barbarian", mastery: "Raekor",
       guideUrl: "https://maxroll.gg/d3/build-guides/raekor-boulder-toss",
       description: "Ancient Spear Boulder Toss Barbarian with Raekor set charge mechanics.",
       playstyle: "melee",
@@ -1494,7 +1578,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Blessed Shield Crusader", className: "Crusader",
+      name: "Blessed Shield Crusader", className: "Crusader", mastery: "Aegis of Valor",
       guideUrl: "https://maxroll.gg/d3/build-guides/blessed-shield-crusader",
       description: "Shield-throwing Crusader with massive ricochet damage from Blessed Shield.",
       playstyle: "melee",
@@ -1504,7 +1588,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "POJ Tempest Rush Monk", className: "Monk",
+      name: "POJ Tempest Rush Monk", className: "Monk", mastery: "Patterns of Justice",
       guideUrl: "https://maxroll.gg/d3/build-guides/poj-tempest-rush-monk",
       description: "Patterns of Justice set Monk sprinting through enemies with Tempest Rush.",
       playstyle: "melee",
@@ -1520,7 +1604,7 @@ function seedData() {
   const gdDefaultMode = createdModes["grim-dawn"]["softcore"];
   const gdBuilds: RichBuild[] = [
     {
-      name: "Dawnbreaker Warder", className: "Warder (Soldier + Shaman)",
+      name: "Dawnbreaker Warder", className: "Soldier", mastery: "Warder",
       guideUrl: "https://forums.crateentertainment.com/t/warder-dawnbreaker/100001",
       description: "Physical damage Warder with Dawnbreaker set and exceptional survivability.",
       playstyle: "melee",
@@ -1530,7 +1614,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Brutallax Dervish", className: "Dervish (Oathkeeper + Nightblade)",
+      name: "Brutallax Dervish", className: "Oathkeeper", mastery: "Dervish",
       guideUrl: "https://www.grimtools.com/calc/brutallax-dervish",
       description: "Dual-wielding Dervish with Zolhan's Technique for tremendous physical DPS.",
       playstyle: "melee",
@@ -1540,7 +1624,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Chillwhisper Reaper", className: "Reaper (Nightblade + Necromancer)",
+      name: "Chillwhisper Reaper", className: "Nightblade", mastery: "Reaper",
       guideUrl: "https://www.grimtools.com/calc/chillwhisper-reaper",
       description: "Cold damage Reaper with Chillwhisper set and huge crowd control.",
       playstyle: "melee",
@@ -1550,7 +1634,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Pierce RoS Blademaster", className: "Blademaster (Soldier + Nightblade)",
+      name: "Pierce RoS Blademaster", className: "Soldier", mastery: "Blademaster",
       guideUrl: "https://forums.crateentertainment.com/t/blademaster-pierce-ros/100002",
       description: "Ring of Steel Blademaster with full pierce damage for unrivaled boss melting.",
       playstyle: "melee",
@@ -1560,7 +1644,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Hellborne Shieldbreaker", className: "Shieldbreaker (Demolitionist + Oathkeeper)",
+      name: "Hellborne Shieldbreaker", className: "Demolitionist", mastery: "Shieldbreaker",
       guideUrl: "https://forums.crateentertainment.com/t/shieldbreaker-hellborne/100003",
       description: "Fire damage Shieldbreaker with Hellborne set and Grenado/Firestrike synergies.",
       playstyle: "caster",
@@ -1570,7 +1654,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Voidsoul Sentinel", className: "Sentinel (Inquisitor + Shaman)",
+      name: "Voidsoul Sentinel", className: "Inquisitor", mastery: "Vindicator",
       guideUrl: "https://www.grimtools.com/calc/voidsoul-sentinel",
       description: "Dual elemental and void Sentinel with Rune of Hagarrad and Trozan's Sky Shard.",
       playstyle: "caster",
@@ -1580,7 +1664,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Deathguard Reaper", className: "Reaper (Nightblade + Necromancer)",
+      name: "Deathguard Reaper", className: "Necromancer", mastery: "Reaper",
       guideUrl: "https://forums.crateentertainment.com/t/reaper-deathguard/100004",
       description: "Bleeding and poison Reaper using Deathguard set for DoT-stacking excellence.",
       playstyle: "melee",
@@ -1590,7 +1674,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Chaos Skeletons Cabalist", className: "Cabalist (Occultist + Arcanist)",
+      name: "Chaos Skeletons Cabalist", className: "Occultist", mastery: "Cabalist",
       guideUrl: "https://forums.crateentertainment.com/t/cabalist-chaos-skele/100005",
       description: "Chaos-infused skeleton army Cabalist destroying everything in its path.",
       playstyle: "summoner",
@@ -1600,7 +1684,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Lightning Elementalist", className: "Warder (Soldier + Shaman)",
+      name: "Lightning Elementalist", className: "Shaman", mastery: "Elementalist",
       guideUrl: "https://forums.crateentertainment.com/t/lightning-elementalist-warder/100006",
       description: "Storm-calling Warder with Savagery and Stormcaller's Pact for lightning mayhem.",
       playstyle: "melee",
@@ -1610,7 +1694,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Cold Conjurer", className: "Conjurer (Occultist + Shaman)",
+      name: "Cold Conjurer", className: "Occultist", mastery: "Conjurer",
       guideUrl: "https://forums.crateentertainment.com/t/conjurer-cold/100007",
       description: "Cold minion Conjurer with Familiar and Briarthorn for dual-summon synergy.",
       playstyle: "summoner",
@@ -1620,7 +1704,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Drain Essence Vitalist", className: "Ritualist (Occultist + Shaman)",
+      name: "Drain Essence Vitalist", className: "Shaman", mastery: "Ritualist",
       guideUrl: "https://forums.crateentertainment.com/t/ritualist-drain-essence/100008",
       description: "Life-draining caster Ritualist with massive sustain from Drain Essence.",
       playstyle: "caster",
@@ -1630,7 +1714,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Witch Hunter Poison", className: "Witch Hunter (Inquisitor + Nightblade)",
+      name: "Witch Hunter Poison", className: "Nightblade", mastery: "Witch Hunter",
       guideUrl: "https://forums.crateentertainment.com/t/witch-hunter-poison/100009",
       description: "Acid/poison Witch Hunter stacking Lethal Assault and Venom stacks.",
       playstyle: "melee",
@@ -1640,7 +1724,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Fire Purifier", className: "Purifier (Demolitionist + Inquisitor)",
+      name: "Fire Purifier", className: "Inquisitor", mastery: "Purifier",
       guideUrl: "https://forums.crateentertainment.com/t/purifier-fire/100010",
       description: "Holy fire Purifier using Inquisitor Seals and explosive fire skills.",
       playstyle: "caster",
@@ -1650,7 +1734,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Aether Oppressor", className: "Oppressor (Occultist + Inquisitor)",
+      name: "Aether Oppressor", className: "Occultist", mastery: "Oppressor",
       guideUrl: "https://forums.crateentertainment.com/t/oppressor-aether/100011",
       description: "Aether damage Oppressor combining chaos and divine forces for unique damage.",
       playstyle: "melee",
@@ -1660,7 +1744,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Vitality Ritualist Army", className: "Ritualist (Occultist + Shaman)",
+      name: "Vitality Ritualist Army", className: "Oathkeeper", mastery: "Archon",
       guideUrl: "https://forums.crateentertainment.com/t/ritualist-vitality-army/100012",
       description: "Vitality damage army Ritualist commanding undead and briarthorns.",
       playstyle: "summoner",
@@ -1676,7 +1760,7 @@ function seedData() {
   const tlDefaultMode = createdModes["torchlight-infinite"]["softcore"];
   const tlBuilds: RichBuild[] = [
     {
-      name: "Youga Ember Lance", className: "Youga",
+      name: "Youga Ember Lance", className: "Spacetime Witness Youga", mastery: "Spacetime Illusion",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/youga-ember-lance",
       description: "Ember Lance spamming Youga with incredible single-target DPS and clear.",
       playstyle: "caster",
@@ -1686,7 +1770,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Gemma Summon Swarm", className: "Gemma",
+      name: "Gemma Summon Swarm", className: "Gemma", mastery: "Flame Spell",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/gemma-swarm",
       description: "Gemma summoning and empowering a swarm of creatures for overwhelming coverage.",
       playstyle: "summoner",
@@ -1696,7 +1780,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Erica Blazing Storm", className: "Erica",
+      name: "Erica Blazing Storm", className: "Cateye Erika", mastery: "Wind Stalker",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/erica-storm",
       description: "Elemental storm Erica summoning fire and lightning for full screen coverage.",
       playstyle: "caster",
@@ -1706,7 +1790,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Thea Phantom Blade", className: "Thea",
+      name: "Thea Phantom Blade", className: "Thea", mastery: "Oracle",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/thea-phantom",
       description: "Phantom blade Thea throwing spectral weapons that return for double damage.",
       playstyle: "ranged",
@@ -1716,7 +1800,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Rosa Frostbolt Barrage", className: "Rosa",
+      name: "Rosa Frostbolt Barrage", className: "Frostfire Gemma", mastery: "Frostfire Mastery",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/rosa-frostbolt",
       description: "Ice bolt barrage Rosa freezing and shattering entire groups with cold magic.",
       playstyle: "caster",
@@ -1726,7 +1810,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Karano Shadow Strike", className: "Karano",
+      name: "Karano Shadow Strike", className: "Divineshot Carino", mastery: "Ranger of Glory",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/karano-shadow",
       description: "Shadow step striker Karano teleporting into enemies for devastating burst.",
       playstyle: "melee",
@@ -1736,7 +1820,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Bing Construct Commander", className: "Bing",
+      name: "Bing Construct Commander", className: "Bing", mastery: "Ranger of Ice",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/bing-construct",
       description: "Mechanical construct Bing commanding robots and turrets for automated slaughter.",
       playstyle: "summoner",
@@ -1746,7 +1830,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Rehan Berserker Charge", className: "Rehan",
+      name: "Rehan Berserker Charge", className: "Berserker Rehan", mastery: "Anger",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/rehan-berserker",
       description: "Berserker charging Rehan with overwhelming physical power and rage stacks.",
       playstyle: "melee",
@@ -1756,7 +1840,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Iris Time Stop", className: "Iris",
+      name: "Iris Time Stop", className: "Spacetime Witness Youga", mastery: "Spacetime Elapse",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/iris-timestop",
       description: "Time-manipulation Iris freezing time and dealing massive burst during stopped time.",
       playstyle: "caster",
@@ -1766,7 +1850,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Youga Pet Army", className: "Youga",
+      name: "Youga Pet Army", className: "Spacetime Witness Youga", mastery: "Spacetime Illusion",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/youga-pets",
       description: "Alternative Youga summoner build commanding a diverse elemental pet army.",
       playstyle: "summoner",
@@ -1776,7 +1860,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Gemma Death Seal", className: "Gemma",
+      name: "Gemma Death Seal", className: "Gemma", mastery: "Lightning Spell",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/gemma-death-seal",
       description: "Death Seal Gemma dealing massive AoE burst on enemies marked for death.",
       playstyle: "caster",
@@ -1786,7 +1870,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Erica Crit Overload", className: "Erica",
+      name: "Erica Crit Overload", className: "Cateye Erika", mastery: "Lightning Shadow",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/erica-crit",
       description: "Critical hit stacking Erica with explosive elemental crits on every hit.",
       playstyle: "caster",
@@ -1796,7 +1880,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Thea Void Blade", className: "Thea",
+      name: "Thea Void Blade", className: "Thea", mastery: "Puppeteer",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/thea-void",
       description: "Void-infused blade Thea tearing holes in reality with every strike.",
       playstyle: "ranged",
@@ -1806,7 +1890,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Karano Poison Daggers", className: "Karano",
+      name: "Karano Poison Daggers", className: "Divineshot Carino", mastery: "Lethal Flash",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/karano-poison",
       description: "Poison dagger Karano stacking venom with every stab for ramping DoT.",
       playstyle: "melee",
@@ -1816,7 +1900,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Rehan Warlord Shield", className: "Rehan",
+      name: "Rehan Warlord Shield", className: "Berserker Rehan", mastery: "Seething Silhouette",
       guideUrl: "https://maxroll.gg/torchlightinfinite/builds/rehan-shield",
       description: "Defensive warlord Rehan using shield bash and block for tanky gameplay.",
       playstyle: "melee",
@@ -1832,7 +1916,7 @@ function seedData() {
   const d2DefaultMode = createdModes["destiny-2"]["pve"];
   const dest2Builds: RichBuild[] = [
     {
-      name: "Contraverse Hold Void Warlock", className: "Warlock",
+      name: "Contraverse Hold Void Warlock", className: "Warlock", mastery: "Voidwalker (Void)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/warlock-contraverse-void",
       description: "Literally broken Contraverse Hold Void Warlock — grenade uptime is perpetual.",
       playstyle: "caster",
@@ -1842,7 +1926,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "GREATEST Solar Titan Build", className: "Titan",
+      name: "GREATEST Solar Titan Build", className: "Titan", mastery: "Sunbreaker (Solar)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/titan-solar",
       description: "Sunbreaker Titan with maximum Solar power and Hammer of Sol uptime.",
       playstyle: "melee",
@@ -1852,7 +1936,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Shadow Hunter Void", className: "Hunter",
+      name: "Shadow Hunter Void", className: "Hunter", mastery: "Nightstalker (Void)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/hunter-void-shadow",
       description: "Void Hunter that Vanishes into shadow for devastating ambush attacks.",
       playstyle: "melee",
@@ -1862,7 +1946,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Praxic Blade Void Titan", className: "Titan",
+      name: "Praxic Blade Void Titan", className: "Titan", mastery: "Sentinel (Void)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/titan-praxic-blade-void",
       description: "CRAZY Titan blade build using Praxic Fire and Void overshield for nuclear damage.",
       playstyle: "melee",
@@ -1872,7 +1956,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Nuclear Storm Titan", className: "Titan",
+      name: "Nuclear Storm Titan", className: "Titan", mastery: "Striker (Arc)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/titan-nuclear-storm",
       description: "Arc Titan with thundercrash and lightning strikes providing storm coverage.",
       playstyle: "melee",
@@ -1882,7 +1966,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Lucky Raspberry Infinite Hunter", className: "Hunter",
+      name: "Lucky Raspberry Infinite Hunter", className: "Hunter", mastery: "Arcstrider (Arc)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/hunter-lucky-raspberry",
       description: "Infinite Arcbolt Grenade spam Hunter — the most fun Arc build in the game.",
       playstyle: "ranged",
@@ -1892,7 +1976,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Winter's Surge Stasis Warlock", className: "Warlock",
+      name: "Winter's Surge Stasis Warlock", className: "Warlock", mastery: "Shadebinder (Stasis)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/warlock-stasis-surge",
       description: "Stasis Warlock with Winter's Guile freezing everything within reach.",
       playstyle: "caster",
@@ -1902,7 +1986,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Blinding Blade Arc Warlock", className: "Warlock",
+      name: "Blinding Blade Arc Warlock", className: "Warlock", mastery: "Stormcaller (Arc)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/warlock-blinding-blade-arc",
       description: "Arclock build with Blinding Grenades and chain lightning buffing entire team.",
       playstyle: "caster",
@@ -1912,7 +1996,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Void Ursa DPS Support Titan", className: "Titan",
+      name: "Void Ursa DPS Support Titan", className: "Titan", mastery: "Sentinel (Void)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/titan-void-ursa-support",
       description: "Bubble-providing support Titan that also deals excellent Void damage.",
       playstyle: "hybrid",
@@ -1922,7 +2006,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "OP Stormdancer Warlock", className: "Warlock",
+      name: "OP Stormdancer Warlock", className: "Warlock", mastery: "Stormcaller (Arc)",
       guideUrl: "https://mobalytics.gg/destiny-2/builds/warlock-stormdancer",
       description: "Stormtrance Warlock reaching astronomical damage with Stormdancer's Brace.",
       playstyle: "caster",
@@ -1932,7 +2016,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Infinite Supers Lawless Hunter", className: "Hunter",
+      name: "Infinite Supers Lawless Hunter", className: "Hunter", mastery: "Gunslinger (Solar)",
       guideUrl: "https://www.youtube.com/watch?v=d2_lawless_hunter",
       description: "Season of Lawless Hunter with infinite super generation for constant Golden Gun.",
       playstyle: "ranged",
@@ -1942,7 +2026,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "God Mode Praxic Blade Titan", className: "Titan",
+      name: "God Mode Praxic Blade Titan", className: "Titan", mastery: "Sunbreaker (Solar)",
       guideUrl: "https://www.youtube.com/watch?v=d2_titan_praxic_god",
       description: "Unkillable Titan with max restoration and Praxic Fire for endgame content.",
       playstyle: "melee",
@@ -1952,7 +2036,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Mothkeeper Strand Hunter", className: "Hunter",
+      name: "Mothkeeper Strand Hunter", className: "Hunter", mastery: "Threadrunner (Strand)",
       guideUrl: "https://www.youtube.com/watch?v=d2_mothkeeper_hunter",
       description: "Strand Hunter using Mothkeeper Wraps for explosive grenade proliferation.",
       playstyle: "ranged",
@@ -1962,7 +2046,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Delicate Tomb Arc Warlock", className: "Warlock",
+      name: "Delicate Tomb Arc Warlock", className: "Warlock", mastery: "Stormcaller (Arc)",
       guideUrl: "https://www.youtube.com/watch?v=d2_delicate_tomb",
       description: "Delicate Tomb exotic Arc Warlock with Ionic Trace synergies and ability spam.",
       playstyle: "caster",
@@ -1972,7 +2056,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Hammer Throw Solar Titan", className: "Titan",
+      name: "Hammer Throw Solar Titan", className: "Titan", mastery: "Sunbreaker (Solar)",
       guideUrl: "https://www.youtube.com/watch?v=d2_hammer_solar_titan",
       description: "Sunbreaker Titan hurling solar hammers with incandescent explosions on every kill.",
       playstyle: "melee",
@@ -1988,7 +2072,7 @@ function seedData() {
   const bl3DefaultMode = createdModes["borderlands-3"]["pve"];
   const bl3Builds: RichBuild[] = [
     {
-      name: "Mozerker 8.0 Moze", className: "Moze",
+      name: "Mozerker 8.0 Moze", className: "Moze", mastery: "Demolition Woman",
       guideUrl: "https://www.youtube.com/watch?v=bl3_mozerker",
       description: "The legendary Mozerker build with infinite grenades and Iron Bear for Moze.",
       playstyle: "hybrid",
@@ -1998,7 +2082,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Khaos Queen Amara", className: "Amara",
+      name: "Khaos Queen Amara", className: "Amara", mastery: "Mystical Assault",
       guideUrl: "https://www.lootlemon.com/class/siren",
       description: "Amara Phasecast build for insane elemental damage output and survivability.",
       playstyle: "melee",
@@ -2008,7 +2092,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Nuclear Revolt Zane", className: "Zane",
+      name: "Nuclear Revolt Zane", className: "Zane", mastery: "Doubled Agent",
       guideUrl: "https://www.lootlemon.com/class/operative",
       description: "Zane with nuclear damage stacking from Double Barrel and MNTIS shoulder cannon.",
       playstyle: "ranged",
@@ -2018,7 +2102,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Rakk Attack FL4K", className: "FL4K",
+      name: "Rakk Attack FL4K", className: "FL4K", mastery: "Hunter",
       guideUrl: "https://www.lootlemon.com/class/beastmaster",
       description: "Perpetual Rakk Attack spam FL4K with Gamma Burst synergies.",
       playstyle: "ranged",
@@ -2028,7 +2112,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Iron Maiden Moze", className: "Moze",
+      name: "Iron Maiden Moze", className: "Moze", mastery: "Shield of Retribution",
       guideUrl: "https://www.lootlemon.com/class/gunner",
       description: "Iron Bear tank Moze that stays in mech permanently with unlimited fuel.",
       playstyle: "hybrid",
@@ -2038,7 +2122,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Fettuccine FL4K", className: "FL4K",
+      name: "Fettuccine FL4K", className: "FL4K", mastery: "Hunter",
       guideUrl: "https://www.lootlemon.com/class/beastmaster",
       description: "Crit-stacking FL4K with Fade Away for consistent one-shotting of all content.",
       playstyle: "ranged",
@@ -2048,7 +2132,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Fade Away Crit FL4K", className: "FL4K",
+      name: "Fade Away Crit FL4K", className: "FL4K", mastery: "Stalker",
       guideUrl: "https://www.youtube.com/watch?v=bl3_fl4k_fade_away",
       description: "Critical hit FL4K that uses Fade Away as the primary damage multiplier.",
       playstyle: "ranged",
@@ -2058,7 +2142,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Immortal Snowshoe Moze", className: "Moze",
+      name: "Immortal Snowshoe Moze", className: "Moze", mastery: "Shield of Retribution",
       guideUrl: "https://www.youtube.com/watch?v=bl3_moze_immortal",
       description: "Unkillable Moze with Snowshoe shield and constant health regeneration.",
       playstyle: "hybrid",
@@ -2068,7 +2152,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Mortal Snowshoe Moze", className: "Moze",
+      name: "Mortal Snowshoe Moze", className: "Moze", mastery: "Bottomless Mags",
       guideUrl: "https://www.youtube.com/watch?v=bl3_moze_mortal",
       description: "Glass cannon Snowshoe Moze maximizing grenade damage at the cost of all defense.",
       playstyle: "ranged",
@@ -2078,7 +2162,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Stackbot Punch Moze", className: "Moze",
+      name: "Stackbot Punch Moze", className: "Moze", mastery: "Bear Mother",
       guideUrl: "https://www.youtube.com/watch?v=bl3_moze_stackbot",
       description: "Action Skill punch Moze with Stackbot artifact for stacking unlimited bonuses.",
       playstyle: "melee",
@@ -2088,7 +2172,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Mantis Cannon Zane", className: "Zane",
+      name: "Mantis Cannon Zane", className: "Zane", mastery: "Hitman",
       guideUrl: "https://www.youtube.com/watch?v=bl3_zane_mantis",
       description: "Mantis Cannon Zane with clone and drone for unique three-body fighting style.",
       playstyle: "hybrid",
@@ -2098,7 +2182,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Phasecast Amara", className: "Amara",
+      name: "Phasecast Amara", className: "Amara", mastery: "Fist of the Elements",
       guideUrl: "https://www.youtube.com/watch?v=bl3_amara_phasecast",
       description: "Phasecast Amara dealing massive upfront spiritual damage on command.",
       playstyle: "caster",
@@ -2108,7 +2192,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Digi-Clone Infinite Zane", className: "Zane",
+      name: "Digi-Clone Infinite Zane", className: "Zane", mastery: "Doubled Agent",
       guideUrl: "https://www.youtube.com/watch?v=bl3_zane_digi",
       description: "Infinite clone cycling Zane that swaps places with his clone for constant buffs.",
       playstyle: "hybrid",
@@ -2118,7 +2202,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Gamma Burst Pet FL4K", className: "FL4K",
+      name: "Gamma Burst Pet FL4K", className: "FL4K", mastery: "Master",
       guideUrl: "https://www.lootlemon.com/class/beastmaster",
       description: "FL4K's Pet takes center stage with Gamma Burst radiation explosions on kills.",
       playstyle: "summoner",
@@ -2128,7 +2212,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Grenadier Moze", className: "Moze",
+      name: "Grenadier Moze", className: "Moze", mastery: "Demolition Woman",
       guideUrl: "https://www.lootlemon.com/class/gunner",
       description: "Infinite grenade Moze throwing explosives with no magazine cost constantly.",
       playstyle: "ranged",
@@ -2144,7 +2228,7 @@ function seedData() {
   const bl4DefaultMode = createdModes["borderlands-4"]["standard"];
   const bl4Builds: RichBuild[] = [
     {
-      name: "Dead Ringer Minion Vex", className: "Vex the Siren",
+      name: "Dead Ringer Minion Vex", className: "Vex the Siren", mastery: "The Fourth Seal",
       guideUrl: "https://game8.co/games/borderlands-4/archives/vex-dead-ringer-build",
       description: "Vex summons Dead Ringer minions that replicate her spells for double damage.",
       playstyle: "summoner",
@@ -2154,7 +2238,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Incarnate Bleed Vex", className: "Vex the Siren",
+      name: "Incarnate Bleed Vex", className: "Vex the Siren", mastery: "Here Comes Trouble",
       guideUrl: "https://game8.co/games/borderlands-4/archives/vex-bleed-build",
       description: "Vex causes Incandescence bleed effects that stack for massive DoT scaling.",
       playstyle: "caster",
@@ -2164,7 +2248,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Peacebreaker Ricochet Rafa", className: "Rafa the Exo-Soldier",
+      name: "Peacebreaker Ricochet Rafa", className: "Rafa the Exo-Soldier", mastery: "Remote Agent",
       guideUrl: "https://game8.co/games/borderlands-4/archives/rafa-peacebreaker",
       description: "Rafa's Peacebreaker rounds ricochet off walls and enemies for surprising damage.",
       playstyle: "ranged",
@@ -2174,7 +2258,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Peacebreaker Overdrive Rafa", className: "Rafa the Exo-Soldier",
+      name: "Peacebreaker Overdrive Rafa", className: "Rafa the Exo-Soldier", mastery: "People Person",
       guideUrl: "https://game8.co/games/borderlands-4/archives/rafa-overdrive",
       description: "Overdrive mode Rafa activating Peacebreaker for turbo attack speed and damage.",
       playstyle: "ranged",
@@ -2184,7 +2268,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Scourge Cryo Amon", className: "Amon the Forgeknight",
+      name: "Scourge Cryo Amon", className: "Amon the Forgeknight", mastery: "Calamity",
       guideUrl: "https://game8.co/games/borderlands-4/archives/amon-cryo-scourge",
       description: "Amon cryo forging — Scourge ability freezes clusters of enemies solid.",
       playstyle: "melee",
@@ -2194,7 +2278,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Calamity Incendiary Amon", className: "Amon the Forgeknight",
+      name: "Calamity Incendiary Amon", className: "Amon the Forgeknight", mastery: "Calamity",
       guideUrl: "https://game8.co/games/borderlands-4/archives/amon-incendiary",
       description: "Calamity Amon with forge-heat incendiary damage amplification on all weapons.",
       playstyle: "melee",
@@ -2204,7 +2288,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Flux Generator Harlowe", className: "Harlowe the Gravitar",
+      name: "Flux Generator Harlowe", className: "Harlowe the Gravitar", mastery: "Cosmic Brilliance",
       guideUrl: "https://game8.co/games/borderlands-4/archives/harlowe-flux",
       description: "Gravity Flux Generator Harlowe suspending enemies for critical vulnerability.",
       playstyle: "caster",
@@ -2214,7 +2298,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "CHROMA Status Harlowe", className: "Harlowe the Gravitar",
+      name: "CHROMA Status Harlowe", className: "Harlowe the Gravitar", mastery: "Creative Bursts",
       guideUrl: "https://game8.co/games/borderlands-4/archives/harlowe-chroma",
       description: "CHROMA ability Harlowe applying all status effects simultaneously for maxed procs.",
       playstyle: "caster",
@@ -2224,7 +2308,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Shock Spear Wrathfall Amon", className: "Amon the Forgeknight",
+      name: "Shock Spear Wrathfall Amon", className: "Amon the Forgeknight", mastery: "Vengeance",
       guideUrl: "https://www.youtube.com/watch?v=bl4_amon_shock",
       description: "Electric spear Amon with Wrathfall meteor calling for devastating ground zeroes.",
       playstyle: "melee",
@@ -2234,7 +2318,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Gunboy Card Totem C4SH", className: "C4SH the Rogue",
+      name: "Gunboy Card Totem C4SH", className: "C4SH the Rogue", mastery: "Roll the Bones",
       guideUrl: "https://mobalytics.gg/borderlands-4/builds/c4sh-gunboy-card-totem",
       description: "C4SH drops card totems that summon GUNBOY turrets for automated slaughter.",
       playstyle: "summoner",
@@ -2244,7 +2328,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "CR4SH No-Reload C4SH", className: "C4SH the Rogue",
+      name: "CR4SH No-Reload C4SH", className: "C4SH the Rogue", mastery: "Chaos Walking",
       guideUrl: "https://mobalytics.gg/borderlands-4/builds/c4sh-no-reload",
       description: "Infinite magazine C4SH build that never needs to reload — just infinite fire.",
       playstyle: "ranged",
@@ -2254,7 +2338,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Infini-Crit Harlowe", className: "Harlowe the Gravitar",
+      name: "Infini-Crit Harlowe", className: "Harlowe the Gravitar", mastery: "Seize the Day",
       guideUrl: "https://www.youtube.com/watch?v=bl4_harlowe_crit",
       description: "Critical hit stacking Harlowe with gravity manipulation exposing weak points.",
       playstyle: "ranged",
@@ -2264,7 +2348,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Ultimate Crit Vex", className: "Vex the Siren",
+      name: "Ultimate Crit Vex", className: "Vex the Siren", mastery: "Vexcalation",
       guideUrl: "https://www.youtube.com/watch?v=bl4_vex_ultimate_crit",
       description: "Maximum critical hit Vex using Siren powers to expose enemy critical points.",
       playstyle: "caster",
@@ -2274,7 +2358,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Incendiary Slugger Amon", className: "Amon the Forgeknight",
+      name: "Incendiary Slugger Amon", className: "Amon the Forgeknight", mastery: "Cybernetics",
       guideUrl: "https://www.youtube.com/watch?v=bl4_amon_slugger",
       description: "Heavy melee Amon with Forgeknight amplification turning all strikes incendiary.",
       playstyle: "melee",
@@ -2284,7 +2368,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "GUNBOY Totem C4SH", className: "C4SH the Rogue",
+      name: "GUNBOY Totem C4SH", className: "C4SH the Rogue", mastery: "Luck of the Draw",
       guideUrl: "https://www.youtube.com/watch?v=bl4_c4sh_gunboy_totem",
       description: "C4SH's signature GUNBOY card summoning — let the totem do all the work.",
       playstyle: "summoner",
@@ -2300,7 +2384,7 @@ function seedData() {
   const fo4DefaultMode = createdModes["fallout-4"]["normal"];
   const fo4Builds: RichBuild[] = [
     {
-      name: "Stealth Sniper", className: "Rifleman",
+      name: "Stealth Sniper", className: "Rifleman", mastery: "Sniper",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-sniper-build",
       description: "Maximum sneak Sniper with scoped rifles and one-shot potential from stealth.",
       playstyle: "ranged",
@@ -2310,7 +2394,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Melee Brawler", className: "Melee",
+      name: "Melee Brawler", className: "Melee", mastery: "Bladed",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-melee-build",
       description: "High STR melee fighter using Power Fist and Blitz for teleport-kill combos.",
       playstyle: "melee",
@@ -2320,7 +2404,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Settlement Commander", className: "Diplomat",
+      name: "Settlement Commander", className: "Settler", mastery: "Local Leader",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-settlement-build",
       description: "Charisma and settlement management build for resource empire building.",
       playstyle: "hybrid",
@@ -2330,7 +2414,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Explosives Expert", className: "Heavy Weapons",
+      name: "Explosives Expert", className: "Heavy Weapons", mastery: "Explosives",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-explosives-build",
       description: "Demolition Expert perks for throwing grenades and mines at everything.",
       playstyle: "ranged",
@@ -2340,7 +2424,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Gunslinger", className: "Pistol",
+      name: "Gunslinger", className: "Gunslinger", mastery: "Pistol VATS",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-pistol-build",
       description: "Nimble Gunslinger with powerful pistols and maximum VATS accuracy.",
       playstyle: "ranged",
@@ -2350,7 +2434,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Power Armor Heavy", className: "Heavy",
+      name: "Power Armor Heavy", className: "Power Armor", mastery: "Nuclear Physicist",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-power-armor-build",
       description: "Minigun-toting Power Armor warrior who ignores all damage entirely.",
       playstyle: "melee",
@@ -2360,7 +2444,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "Luck VATS Commando", className: "Automatic",
+      name: "Luck VATS Commando", className: "VATS", mastery: "Critical Banker",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-vats-build",
       description: "Maximum Luck VATS build with automatic weapons and critical hit cycling.",
       playstyle: "ranged",
@@ -2370,7 +2454,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Rifleman Marksman", className: "Rifle",
+      name: "Rifleman Marksman", className: "Rifleman", mastery: "Marksman",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-rifleman-build",
       description: "Long-range Rifleman with Commando perks for scoped rifle excellence.",
       playstyle: "ranged",
@@ -2380,7 +2464,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Stealth Melee Ninja", className: "Melee",
+      name: "Stealth Melee Ninja", className: "Stealth", mastery: "Sneak Assassin",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-ninja-build",
       description: "Invisible melee killer combining Sneak Attack with bladed weapon multipliers.",
       playstyle: "melee",
@@ -2390,7 +2474,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Sniper Headshot Specialist", className: "Sniper",
+      name: "Sniper Headshot Specialist", className: "Sniper", mastery: "Awareness",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-sniper-specialist",
       description: "Specialized headshot precision sniper taking out enemies from maximum range.",
       playstyle: "ranged",
@@ -2400,7 +2484,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Unarmed Brawler", className: "Unarmed",
+      name: "Unarmed Brawler", className: "Melee", mastery: "Unarmed",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-unarmed-build",
       description: "Iron Fist maxed unarmed build dealing incredible bare-knuckle devastation.",
       playstyle: "melee",
@@ -2410,7 +2494,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "budget",
     },
     {
-      name: "Charisma Diplomat", className: "Speech",
+      name: "Charisma Diplomat", className: "Diplomat", mastery: "Inspirational",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-charisma-build",
       description: "Maximum charisma build for persuading, intimidating, and pacifying enemies.",
       playstyle: "hybrid",
@@ -2420,7 +2504,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "budget",
     },
     {
-      name: "Spray n Pray Commando", className: "Automatic",
+      name: "Spray n Pray Commando", className: "Rifleman", mastery: "Commando",
       guideUrl: "https://www.reddit.com/r/fo4/comments/best_commando_build",
       description: "Automatic weapon specialist using Spray n Pray for explosive rounds on everything.",
       playstyle: "ranged",
@@ -2430,7 +2514,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "mid-range",
     },
     {
-      name: "VATS Tactician", className: "VATS",
+      name: "VATS Tactician", className: "VATS", mastery: "Gun Fu",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-vats-tactics",
       description: "VATS chaining specialist cycling through critical hits perpetually in slow motion.",
       playstyle: "ranged",
@@ -2440,7 +2524,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Nuke Launcher", className: "Heavy Weapons",
+      name: "Nuke Launcher", className: "Heavy Weapons", mastery: "Explosives",
       guideUrl: "https://www.hacktheminotaur.com/fallout-4-heavy-weapons-build",
       description: "Demolitions expert with Fat Man and Missile Launcher for room-clearing explosions.",
       playstyle: "ranged",
@@ -2456,7 +2540,7 @@ function seedData() {
   const cdDefaultMode = createdModes["crimson-desert"]["pve"];
   const cdBuilds: RichBuild[] = [
     {
-      name: "Savage Samurai Kliff", className: "Kliff",
+      name: "Savage Samurai Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_samurai",
       description: "Katana-wielding Kliff with blazing fast attacks and lethal samurai combos.",
       playstyle: "melee",
@@ -2466,7 +2550,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Unga Bunga Behemoth Oongka", className: "Oongka",
+      name: "Unga Bunga Behemoth Oongka", className: "Macduff", mastery: "Stamina",
       guideUrl: "https://www.youtube.com/watch?v=cd_oongka_behemoth",
       description: "Oongka wielding a massive club and hitting everything with overwhelming brute force.",
       playstyle: "melee",
@@ -2476,7 +2560,7 @@ function seedData() {
       difficulty: "beginner", budgetLevel: "budget",
     },
     {
-      name: "Supernatural Melee Monk Kliff", className: "Kliff",
+      name: "Supernatural Melee Monk Kliff", className: "Kliff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_monk",
       description: "Martial arts Kliff with supernatural speed and precision combo attacks.",
       playstyle: "melee",
@@ -2486,7 +2570,7 @@ function seedData() {
       difficulty: "expert", budgetLevel: "endgame",
     },
     {
-      name: "Dual Fireworks Kliff", className: "Kliff",
+      name: "Dual Fireworks Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_fireworks",
       description: "Twin-wielding explosive Kliff creating firework-like detonations with each strike.",
       playstyle: "ranged",
@@ -2496,7 +2580,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Critical Cannon Kliff", className: "Kliff",
+      name: "Critical Cannon Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_cannon",
       description: "High critical rate Kliff with cannon-like power on charged attacks.",
       playstyle: "ranged",
@@ -2506,7 +2590,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Boss Slayer Kliff", className: "Kliff",
+      name: "Boss Slayer Kliff", className: "Kliff", mastery: "Health",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_boss_slayer",
       description: "Specialized boss killing Kliff with focused burst damage windows.",
       playstyle: "melee",
@@ -2516,7 +2600,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Lightning Mecha Spear Kliff", className: "Kliff",
+      name: "Lightning Mecha Spear Kliff", className: "Kliff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_lightning_spear",
       description: "Electric spear Kliff channeling lightning through each mechanical thrust.",
       playstyle: "melee",
@@ -2526,7 +2610,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "expensive",
     },
     {
-      name: "Shaman 2-Hander Kliff", className: "Kliff",
+      name: "Shaman 2-Hander Kliff", className: "Kliff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_shaman",
       description: "Spiritual two-handed Kliff drawing power from shamanic connection to elements.",
       playstyle: "melee",
@@ -2536,7 +2620,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Thunder Witch Lightning Orbs Kliff", className: "Kliff",
+      name: "Thunder Witch Lightning Orbs Kliff", className: "Kliff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_thunder_witch",
       description: "Ranged lightning orb Kliff with thunderous detonations on impact.",
       playstyle: "caster",
@@ -2546,7 +2630,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Kinetic Burst Kliff", className: "Kliff",
+      name: "Kinetic Burst Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_kinetic",
       description: "Kinetic energy releasing Kliff with charged burst attacks for mass stagger.",
       playstyle: "melee",
@@ -2556,7 +2640,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Purple Magic Fist Kliff", className: "Kliff",
+      name: "Purple Magic Fist Kliff", className: "Kliff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_kliff_purple_fist",
       description: "Dark magic-channeling Kliff punching with supernatural purple energy fists.",
       playstyle: "melee",
@@ -2566,7 +2650,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Raging Lightning Oongka", className: "Oongka",
+      name: "Raging Lightning Oongka", className: "Macduff", mastery: "Spirit",
       guideUrl: "https://www.youtube.com/watch?v=cd_oongka_lightning",
       description: "Oongka calling lightning storms from the sky while charging enemies.",
       playstyle: "caster",
@@ -2576,7 +2660,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "expensive",
     },
     {
-      name: "Elemental Blade Kliff", className: "Kliff",
+      name: "Elemental Blade Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.lootlemon.com/crimson-desert/kliff",
       description: "Multi-element blade Kliff cycling fire, ice, and lightning for maximum versatility.",
       playstyle: "melee",
@@ -2586,7 +2670,7 @@ function seedData() {
       difficulty: "intermediate", budgetLevel: "mid-range",
     },
     {
-      name: "Abyssal Lich Spear Kliff", className: "Kliff",
+      name: "Abyssal Lich Spear Kliff", className: "Kliff", mastery: "Health",
       guideUrl: "https://www.lootlemon.com/crimson-desert/kliff-abyssal",
       description: "Dark abyssal energy spear Kliff with lifesteal and undead summoning synergies.",
       playstyle: "melee",
@@ -2596,7 +2680,7 @@ function seedData() {
       difficulty: "advanced", budgetLevel: "endgame",
     },
     {
-      name: "Optimal Crit Spear Kliff", className: "Kliff",
+      name: "Optimal Crit Spear Kliff", className: "Kliff", mastery: "Stamina",
       guideUrl: "https://www.reddit.com/r/CrimsonDesert/comments/kliff_crit_spear",
       description: "Maximum critical rate spear build optimized for consistent one-shot potential.",
       playstyle: "ranged",
